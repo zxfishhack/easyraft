@@ -1,0 +1,145 @@
+#include "kv.h"
+#include "raft_interfaces.h"
+
+#include <easyraft.h>
+#include <iostream>
+#include <string>
+#include <vector>
+
+kv g_kv;
+proposeWaiter g_pw;
+uint64_t self;
+
+const char* json[] = {
+	R"({"id":1,"cluster_id":1,"snap_count":10000,"waldir":"wal1","snapdir":"snap1","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000})",
+	R"({"id":2,"cluster_id":1,"snap_count":10000,"waldir":"wal2","snapdir":"snap2","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000})",
+	R"({"id":3,"cluster_id":1,"snap_count":10000,"waldir":"wal3","snapdir":"snap3","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000})",
+};
+
+int main(int argc, const char*argv[]) {
+	if (argc != 2) {
+		return -1;
+	}
+	char ver[256];
+	Context ctx;
+	ctx.freeSnapshot = freeSnapshot;
+	ctx.getSnapshot = getSnapshot;
+	ctx.onCommit = onCommit;
+	ctx.onStateChange = onStateChange;
+	ctx.recoverFromSnapshot = recoverFromSnapshot;
+	RAFT_GetVersion(ver, 256);
+	std::cout << ver << std::endl;
+	RAFT_SetContext(&ctx);
+	RAFT_SetLogger("stdout", 0);
+	RAFT_SetLogLevel(RAFT_LOG_DEBUG);
+	self = atoi(argv[1]) - 1;
+	auto svr = RAFT_NewRaftServer(0, json[self]);
+	std::cout << svr << std::endl;
+	std::string pro;
+	std::vector<std::string> arg;
+	std::string cmd;
+	std::string v;
+	auto propose_wait = [&]() ->bool
+	{
+		auto ret = false;
+		auto size = propose::header_length() + pro.length();
+		auto mem = new char[size];
+		auto& pr = *reinterpret_cast<propose*>(mem);
+		pr.id = self;
+		pr.seq = g_pw.getSeq();
+		memcpy(pr.cmd, pro.c_str(), pro.length());
+		if (RAFT_Propose(svr, mem, (int)size) != 0) {
+			std::cout << cmd << " failed." << std::endl;
+		}
+		else {
+			g_pw.wait(pr.seq);
+			ret = true;
+		}
+		delete[]mem;
+		return ret;
+	};
+	while(true) {
+		std::getline(std::cin, pro);
+		pro = pro.substr(0, pro.find_last_of('\n'));
+		splitCmd(pro, cmd, arg);
+		if (cmd == "exit") {
+			break;
+		} 
+		else if (cmd == "snapshot") {
+			RAFT_Snapshot(svr);
+		} 
+		else if (cmd == "get" && arg.size() >= 1u) {
+			if (g_kv.get(arg[0], v)) {
+				std::cout << "value: " << v << std::endl;
+			} else {
+				std::cout << "key not found" << std::endl;
+			}
+		}
+		else if(cmd == "sget" && arg.size() >= 1u) {
+			if (propose_wait()) {
+				if (g_kv.get(arg[0], v)) {
+					std::cout << "value: " << v << std::endl;
+				}
+				else {
+					std::cout << "key not found" << std::endl;
+				}
+			}
+		}
+		else if (cmd == "set" && arg.size() >= 2u) {
+			if (propose_wait()) {
+				std::cout << "set done" << std::endl;
+			}
+		}
+		else if (cmd == "app" && arg.size() >= 2u) {
+			if (propose_wait()) {
+				std::cout << "app done" << std::endl;
+			}
+		}
+		else if (cmd == "del" && arg.size() >= 1u) {
+			if (propose_wait()) {
+				std::cout << "del done" << std::endl;
+			}
+		}
+		else if (cmd == "help") {
+			std::cout << "exit     : end server"                << std::endl;
+			std::cout << "snapshot : force generate a snapshot" << std::endl;
+			std::cout << "get k    : dirty get k v"             << std::endl;
+			std::cout << "sget k   : safe get k v"              << std::endl;
+			std::cout << "app k v  : append k v"                << std::endl;
+			std::cout << "del k    : delete key k"              << std::endl;
+		}
+		else {
+			std::cout << "illegal command, type help to get command list." << std::endl;
+			//RAFT_Propose(svr, (void*)pro.c_str(), (int)pro.length());
+		}
+	}
+	RAFT_DeleteRaftServer(svr);
+	return 0;
+}
+
+void splitCmd(const std::string& line_, std::string& cmd, std::vector<std::string>& arg) {
+	auto line = line_;
+	arg.clear();
+	auto inColon = false;
+	for (auto& c : line) {
+		if (c == ' ' && !inColon) {
+			c = '\x0';
+		}
+		else if (c == '"') {
+			inColon = !inColon;
+		}
+	}
+	auto pos = line.find_first_of('\x0');
+	cmd = line.substr(0, pos);
+	std::for_each(cmd.begin(), cmd.end(), [](char c) -> char { return tolower(c); });
+	while (pos != line.npos) {
+		auto beg = pos + 1;
+		pos = line.find_first_of('\x0', beg);
+		if (pos != line.npos) {
+			arg.push_back(line.substr(beg, pos - beg));
+		}
+		else {
+			arg.push_back(line.substr(beg));
+		}
+	}
+}
