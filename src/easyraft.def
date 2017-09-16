@@ -1,0 +1,13 @@
+EXPORTS
+
+RAFT_SetContext = RAFT_SetContext
+RAFT_SetLogger = RAFT_SetLogger
+RAFT_SetLogLevel = RAFT_SetLogLevel
+RAFT_GetVersion = RAFT_GetVersion
+RAFT_NewRaftServer = RAFT_NewRaftServer
+RAFT_DeleteRaftServer = RAFT_DeleteRaftServer
+RAFT_Propose = RAFT_Propose
+RAFT_Snapshot = RAFT_Snapshot
+RAFT_AddServer = RAFT_AddServer
+RAFT_DelServer = RAFT_DelServer
+RAFT_ChangeServer = RAFT_ChangeServer
