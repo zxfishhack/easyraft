@@ -1,5 +1,5 @@
 # easyraft
-RAFT C wrapper implement from coreos/etcd 
+RAFT C wrapper, origin go implement by coreos([Raft](https://github.com/coreos/etcd/tree/master/raft)) 
 
 ## API
 ```
