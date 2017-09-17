@@ -7,6 +7,7 @@
 #include <vector>
 #include <atomic>
 #include <iomanip>
+#include <cstring>
 
 kv g_kv;
 proposeWaiter g_pw;

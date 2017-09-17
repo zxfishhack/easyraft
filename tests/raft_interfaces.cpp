@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <atomic>
+#include <cstring>
 
 extern kv g_kv;
 extern proposeWaiter g_pw;

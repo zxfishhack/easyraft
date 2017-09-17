@@ -17,6 +17,8 @@ struct Context {
 #else
 #define DLL_EXPORTS __declspec(dllimport)
 #endif // __GNUC__ 
+#else
+#define DLL_EXPORTS
 #endif // _WIN32
 
 #ifdef __cplusplus

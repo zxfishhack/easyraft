@@ -4,6 +4,7 @@
 #include <string>
 #include <mutex>
 #include <algorithm>
+#include <condition_variable>
 
 struct propose {
 	uint64_t id;
