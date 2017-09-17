@@ -5,15 +5,18 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <atomic>
+#include <iomanip>
 
 kv g_kv;
 proposeWaiter g_pw;
 uint64_t self;
+std::atomic<uint64_t> g_done;
 
 const char* json[] = {
-	R"({"id":1,"cluster_id":1,"snap_count":10000,"waldir":"wal1","snapdir":"snap1","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000})",
-	R"({"id":2,"cluster_id":1,"snap_count":10000,"waldir":"wal2","snapdir":"snap2","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000})",
-	R"({"id":3,"cluster_id":1,"snap_count":10000,"waldir":"wal3","snapdir":"snap3","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000})",
+	R"({"id":1,"cluster_id":1,"snap_count":10000,"waldir":"wal1","snapdir":"snap1","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
+	R"({"id":2,"cluster_id":1,"snap_count":10000,"waldir":"wal2","snapdir":"snap2","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
+	R"({"id":3,"cluster_id":1,"snap_count":10000,"waldir":"wal3","snapdir":"snap3","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
 };
 
 int main(int argc, const char*argv[]) {
@@ -39,7 +42,7 @@ int main(int argc, const char*argv[]) {
 	std::vector<std::string> arg;
 	std::string cmd;
 	std::string v;
-	auto propose_wait = [&]() ->bool
+	auto propose_wait = [&](bool wait = true) ->bool
 	{
 		auto ret = false;
 		auto size = propose::header_length() + pro.length();
@@ -52,7 +55,9 @@ int main(int argc, const char*argv[]) {
 			std::cout << cmd << " failed." << std::endl;
 		}
 		else {
-			g_pw.wait(pr.seq);
+			if (wait) {
+				g_pw.wait(pr.seq);
+			}
 			ret = true;
 		}
 		delete[]mem;
@@ -99,6 +104,44 @@ int main(int argc, const char*argv[]) {
 			if (propose_wait()) {
 				std::cout << "del done" << std::endl;
 			}
+		}
+		else if (cmd == "bench") {
+			RAFT_SetLogger(0, 0);
+			auto benchSize = 100000;
+			auto propSize = 512;
+			if (arg.size() >= 1u) {
+				benchSize = std::atoi(arg[0].c_str());
+			}
+			auto step = benchSize / 10;
+			auto cur = step;
+			pro = "set hello ";
+			for(auto i=0; i<propSize; i++) {
+				pro += "a";
+			}
+			auto start = std::chrono::high_resolution_clock::now();
+			for(auto i=0; i<benchSize - 1; i++) {
+				propose_wait(false);
+				if (i >= cur) {
+					std::cout << i << " ops done." << std::endl;
+					cur += step;
+				}
+			}
+			auto cp1 = std::chrono::high_resolution_clock::now();
+			pro = "set hello ";
+			for (auto i = 0; i<propSize; i++) {
+				pro += "b";
+			}
+			propose_wait(true);
+			std::cout << benchSize << " ops done." << std::endl;
+			auto cp2 = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<double, std::milli> dms = cp1 - start;
+			auto ds = std::chrono::duration_cast<std::chrono::duration<double>>(dms);
+			std::cout.setf(std::ios::fixed);
+			std::cout << "send propose " << benchSize << " times cost " << std::setprecision(2) << dms.count() << " ms. " << " qps: " << std::setprecision(2) << benchSize / ds.count() << std::endl;
+			dms = cp2 - start;
+			ds = std::chrono::duration_cast<std::chrono::duration<double>>(dms);
+			std::cout << "done propose " << benchSize << " times cost " << std::setprecision(2) << dms.count() << " ms. " << " qps: " << std::setprecision(2) << benchSize / ds.count() << std::endl;
+			RAFT_SetLogger("stdout", 0);
 		}
 		else if (cmd == "help") {
 			std::cout << "exit     : end server"                << std::endl;

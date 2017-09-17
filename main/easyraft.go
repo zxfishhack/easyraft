@@ -42,8 +42,12 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
+
+	"github.com/coreos/etcd/pkg/fileutil"
 
 	"github.com/coreos/etcd/raft"
 	"github.com/coreos/etcd/snap"
@@ -57,6 +61,9 @@ type raftServer struct {
 	snap  *snap.Snapshotter
 	ctx   unsafe.Pointer
 	node  *raftNode
+	wgMu  sync.RWMutex
+	wg    sync.WaitGroup
+	cfg   config
 	stopc chan struct{}
 }
 
@@ -80,6 +87,22 @@ func getSnapshot(r *raftServer) (ret []byte, err error) {
 		C.FreeSnapshotInternal(r.ctx, data)
 	}
 	return ret, err
+}
+
+func (r *raftServer) goAttach(f func()) {
+	r.wgMu.RLock()
+	defer r.wgMu.RUnlock()
+	select {
+	case <-r.stopc:
+		plog.Warning("server has stopped (skipping goAttach)")
+	default:
+	}
+
+	r.wg.Add(1)
+	go func() {
+		defer r.wg.Done()
+		f()
+	}()
 }
 
 func (r *raftServer) onStateReport() {
@@ -128,6 +151,28 @@ func (r *raftServer) recoverFromSnapshot() {
 	}
 	if ret != 0 {
 		plog.Panic(fmt.Errorf("recover from snapshot failed[%d]", ret))
+	}
+}
+
+const (
+	purgeFileInterval = time.Duration(30) * time.Second
+)
+
+func (r *raftServer) purgeFile() {
+	var serrc, werrc <-chan error
+	if r.cfg.MaxSnapFiles > 0 {
+		serrc = fileutil.PurgeFile(r.cfg.Snapdir, "snap", r.cfg.MaxSnapFiles, purgeFileInterval, r.stopc)
+	}
+	if r.cfg.MaxWALFiles > 0 {
+		werrc = fileutil.PurgeFile(r.cfg.Waldir, "wal", r.cfg.MaxWALFiles, purgeFileInterval, r.stopc)
+	}
+	select {
+	case e := <-serrc:
+		plog.Fatalf("failed to purge snap file %v", e)
+	case e := <-werrc:
+		plog.Fatalf("failed to purge wal file %v", e)
+	case <-r.stopc:
+		return
 	}
 }
 
@@ -190,14 +235,14 @@ func NewRaftServer(ctx unsafe.Pointer, jsonConfig *C.char) unsafe.Pointer {
 		stopc: make(chan struct{}),
 	}
 	svr.inter.ctx = svr
-	go svr.onStateReport()
+	svr.goAttach(svr.onStateReport)
 	var cfg config
 	if err := json.Unmarshal([]byte(C.GoString(jsonConfig)), &cfg); err != nil {
 		lastError = err
 		return null()
 	}
 	svr.node, svr.snap = newRaftNode(cfg, svr.inter)
-	go svr.readCommits()
+	svr.goAttach(svr.readCommits)
 	cnt := ptr(atomic.AddUint64(&counter, 1))
 	holder[cnt] = svr
 	return cnt
@@ -209,6 +254,7 @@ func DeleteRaftServer(p unsafe.Pointer) {
 	if r != nil {
 		r.node.stop()
 		close(r.stopc)
+		r.wg.Wait()
 		delete(holder, p)
 		runtime.GC()
 	}

@@ -3,10 +3,12 @@
 
 #include <iostream>
 #include <vector>
+#include <atomic>
 
 extern kv g_kv;
 extern proposeWaiter g_pw;
 extern uint64_t self;
+extern std::atomic<uint64_t> g_done;
 
 const char* raftState[] = {
 	"StateFollower",
@@ -41,7 +43,7 @@ void onStateChange(void* ctx, int newState) {
 }
 
 int recoverFromSnapshot(void* ctx, void* data, uint64_t size) {
-	std::cout << "recoverFromSnapshot" << std::endl;
+	std::cout << "recoverFromSnapshot\n";
 	std::string str((char*)data, size);
 	g_kv.deserialize(str);
 	return 0;
@@ -51,10 +53,15 @@ int onCommit(void* ctx, void* data, uint64_t size) {
 	auto pr = static_cast<propose*>(data);
 	std::string line;
 	line.assign(pr->cmd, size - propose::header_length());
+	if (pr->id == self) {
+		++g_done;
+	}
+	if (strncmp(line.c_str(), "bench", 5) == 0) {
+		return 0;
+	}
 	std::string cmd;
 	std::vector<std::string> arg;
 	splitCmd(line, cmd, arg);
-	std::cout << "onCommit: " << line << std::endl;
 	if (cmd == "set" && arg.size() >= 2u) {
 		g_kv.put(arg[0], arg[1]);
 	}

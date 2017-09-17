@@ -94,7 +94,7 @@ func newRaftNode(cfg config, r *raftNodeInternal) (*raftNode, *snap.Snapshotter)
 	rc.inter.commitC = make(chan *[]byte)
 	rc.inter.errorC = make(chan error)
 
-	go rc.startRaft()
+	rc.inter.ctx.goAttach(rc.startRaft)
 	return rc, <-rc.snapshotterReady
 }
 
@@ -295,8 +295,8 @@ func (rc *raftNode) startRaft() {
 		}
 	}
 
-	go rc.serveRaft()
-	go rc.serveChannels()
+	rc.inter.ctx.goAttach(rc.serveRaft)
+	rc.inter.ctx.goAttach(rc.serveChannels)
 
 }
 
@@ -385,7 +385,7 @@ func (rc *raftNode) serveChannels() {
 	defer ticker.Stop()
 
 	// send proposals over raft
-	go func() {
+	rc.inter.ctx.goAttach(func() {
 		var confChangeCount uint64
 
 		for rc.inter.proposeC != nil && rc.inter.confChangeC != nil && rc.inter.snapshotC != nil {
@@ -417,7 +417,7 @@ func (rc *raftNode) serveChannels() {
 		// client closed channel; shutdown raft if not already
 		plog.Noticef("proposeC & confChangeC reader exit")
 		close(rc.stopc)
-	}()
+	})
 
 	// event loop on raft state machine updates
 	for {

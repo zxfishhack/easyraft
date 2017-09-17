@@ -1,2 +1,7 @@
 bin
 libs
+objs/
+tests/_ReSharper.Caches/
+tests/.vs/
+.VC.db
+tests/tests.VC.db

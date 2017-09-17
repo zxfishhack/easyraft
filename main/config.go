@@ -52,6 +52,8 @@ type config struct {
 	MaxSizePerMsg    uint64 `json:"max_size_per_msg"`
 	MaxInflightMsgs  int    `json:"max_inflight_msgs"`
 	SnapshotEntries  uint64 `json:"snapshot_entries"`
+	MaxSnapFiles     uint   `json:"max_snap_files"`
+	MaxWALFiles      uint   `json:"max_wal_files"`
 }
 
 func (c *config) backendPath() string { return filepath.Join(c.Snapdir, "db") }
