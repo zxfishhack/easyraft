@@ -38,22 +38,23 @@ type peer struct {
 }
 
 type config struct {
-	ID               uint64 `json:"id"`
-	ClusterID        uint64 `json:"cluster_id"`
-	SnapCount        uint64 `json:"snap_count"`
-	Waldir           string `json:"waldir"`
-	Snapdir          string `json:"snapdir"`
-	TickMs           uint64 `json:"tickms"`
-	ElectionTick     int    `json:"election_tick"`
-	HeartbeatTick    int    `json:"heartbeat_tick"`
-	BootstrapTimeout int    `json:"boostrap_timeout"`
-	Peers            []peer `json:"peers"`
-	JoinExist        bool   `json:"join"`
-	MaxSizePerMsg    uint64 `json:"max_size_per_msg"`
-	MaxInflightMsgs  int    `json:"max_inflight_msgs"`
-	SnapshotEntries  uint64 `json:"snapshot_entries"`
-	MaxSnapFiles     uint   `json:"max_snap_files"`
-	MaxWALFiles      uint   `json:"max_wal_files"`
+	ID                uint64 `json:"id"`
+	ClusterID         uint64 `json:"cluster_id"`
+	SnapCount         uint64 `json:"snap_count"`
+	Waldir            string `json:"waldir"`
+	Snapdir           string `json:"snapdir"`
+	TickMs            uint64 `json:"tickms"`
+	ElectionTick      int    `json:"election_tick"`
+	HeartbeatTick     int    `json:"heartbeat_tick"`
+	BootstrapTimeout  int    `json:"boostrap_timeout"`
+	Peers             []peer `json:"peers"`
+	JoinExist         bool   `json:"join"`
+	MaxSizePerMsg     uint64 `json:"max_size_per_msg"`
+	MaxInflightMsgs   int    `json:"max_inflight_msgs"`
+	SnapshotEntries   uint64 `json:"snapshot_entries"`
+	MaxSnapFiles      uint   `json:"max_snap_files"`
+	MaxWALFiles       uint   `json:"max_wal_files"`
+	PurgeFileInterval int    `json:"purge_file_interval"`
 }
 
 func (c *config) backendPath() string { return filepath.Join(c.Snapdir, "db") }

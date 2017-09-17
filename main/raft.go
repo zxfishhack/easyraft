@@ -297,7 +297,7 @@ func (rc *raftNode) startRaft() {
 
 	rc.inter.ctx.goAttach(rc.serveRaft)
 	rc.inter.ctx.goAttach(rc.serveChannels)
-
+	plog.Notice("start raft done")
 }
 
 func (rc *raftNode) stop() {
@@ -305,12 +305,14 @@ func (rc *raftNode) stop() {
 	close(rc.inter.commitC)
 	close(rc.inter.errorC)
 	rc.node.Stop()
+	plog.Notice("raft node stopped")
 }
 
 func (rc *raftNode) stopHTTP() {
 	rc.transport.Stop()
 	close(rc.httpstopc)
 	<-rc.httpdonec
+	plog.Notice("http server stopped")
 }
 
 func (rc *raftNode) publishSnapshot(snapshotToSave raftpb.Snapshot) {
@@ -371,6 +373,7 @@ func (rc *raftNode) maybeTriggerSnapshot(force bool) {
 }
 
 func (rc *raftNode) serveChannels() {
+	defer plog.Notice("serveChannels exit")
 	snap, err := rc.raftStorage.Snapshot()
 	if err != nil {
 		panic(err)
@@ -387,6 +390,7 @@ func (rc *raftNode) serveChannels() {
 	// send proposals over raft
 	rc.inter.ctx.goAttach(func() {
 		var confChangeCount uint64
+		defer plog.Notice("proposeC & confChangeC reader exit")
 
 		for rc.inter.proposeC != nil && rc.inter.confChangeC != nil && rc.inter.snapshotC != nil {
 			select {
@@ -415,7 +419,7 @@ func (rc *raftNode) serveChannels() {
 			}
 		}
 		// client closed channel; shutdown raft if not already
-		plog.Noticef("proposeC & confChangeC reader exit")
+
 		close(rc.stopc)
 	})
 
@@ -449,11 +453,9 @@ func (rc *raftNode) serveChannels() {
 			return
 
 		case <-rc.stopc:
-			rc.stop()
 			return
 		}
 	}
-	plog.Noticef("serveChannel exit")
 }
 
 func (rc *raftNode) serveRaft() {
@@ -478,6 +480,7 @@ func (rc *raftNode) serveRaft() {
 		plog.Fatalf("Failed to serve rafthttp (%v)", err)
 	}
 	close(rc.httpdonec)
+	plog.Notice("serveRaft exit")
 }
 
 func (rc *raftNode) Process(ctx context.Context, m raftpb.Message) error {

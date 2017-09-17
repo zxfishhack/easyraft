@@ -65,6 +65,10 @@ type raftServer struct {
 	wg    sync.WaitGroup
 	cfg   config
 	stopc chan struct{}
+
+	// for debug
+	attachCount uint64
+	doneCount   uint64
 }
 
 var (
@@ -99,9 +103,11 @@ func (r *raftServer) goAttach(f func()) {
 	}
 
 	r.wg.Add(1)
+	atomic.AddUint64(&r.attachCount, 1)
 	go func() {
 		defer r.wg.Done()
 		f()
+		atomic.AddUint64(&r.doneCount, 1)
 	}()
 }
 
@@ -109,11 +115,13 @@ func (r *raftServer) onStateReport() {
 	for {
 		select {
 		case <-r.stopc:
+			plog.Notice("onStateReport exit")
 			return
 		case s := <-r.inter.stateC:
 			C.OnStateChangeInternal(r.ctx, C.int(s))
 		}
 	}
+	plog.Notice("onStateReport exit")
 }
 
 func (r *raftServer) readCommits() {
@@ -130,6 +138,7 @@ func (r *raftServer) readCommits() {
 	if err, ok := <-r.inter.errorC; ok {
 		plog.Fatal(err)
 	}
+	plog.Notice("readCommits exit")
 }
 
 func (r *raftServer) recoverFromSnapshot() {
@@ -161,9 +170,11 @@ const (
 func (r *raftServer) purgeFile() {
 	var serrc, werrc <-chan error
 	if r.cfg.MaxSnapFiles > 0 {
+		plog.Infof("start purge snap file [maxFile: %d]\n", r.cfg.MaxSnapFiles)
 		serrc = fileutil.PurgeFile(r.cfg.Snapdir, "snap", r.cfg.MaxSnapFiles, purgeFileInterval, r.stopc)
 	}
 	if r.cfg.MaxWALFiles > 0 {
+		plog.Infof("start purge wal file [maxFile: %d]\n", r.cfg.MaxWALFiles)
 		werrc = fileutil.PurgeFile(r.cfg.Waldir, "wal", r.cfg.MaxWALFiles, purgeFileInterval, r.stopc)
 	}
 	select {
@@ -172,8 +183,10 @@ func (r *raftServer) purgeFile() {
 	case e := <-werrc:
 		plog.Fatalf("failed to purge wal file %v", e)
 	case <-r.stopc:
+		plog.Notice("purgeFile exit")
 		return
 	}
+	plog.Notice("purgeFile exit")
 }
 
 func null() unsafe.Pointer {
@@ -236,13 +249,14 @@ func NewRaftServer(ctx unsafe.Pointer, jsonConfig *C.char) unsafe.Pointer {
 	}
 	svr.inter.ctx = svr
 	svr.goAttach(svr.onStateReport)
-	var cfg config
-	if err := json.Unmarshal([]byte(C.GoString(jsonConfig)), &cfg); err != nil {
+	plog.Infof("NewRaftServer with config[%s]\n", C.GoString(jsonConfig))
+	if err := json.Unmarshal([]byte(C.GoString(jsonConfig)), &svr.cfg); err != nil {
 		lastError = err
 		return null()
 	}
-	svr.node, svr.snap = newRaftNode(cfg, svr.inter)
+	svr.node, svr.snap = newRaftNode(svr.cfg, svr.inter)
 	svr.goAttach(svr.readCommits)
+	svr.goAttach(svr.purgeFile)
 	cnt := ptr(atomic.AddUint64(&counter, 1))
 	holder[cnt] = svr
 	return cnt
@@ -252,6 +266,9 @@ func NewRaftServer(ctx unsafe.Pointer, jsonConfig *C.char) unsafe.Pointer {
 func DeleteRaftServer(p unsafe.Pointer) {
 	r := holder[p]
 	if r != nil {
+		plog.Debugf("before real stop, attach:%d done:%d", r.attachCount, r.doneCount)
+		close(r.inter.proposeC)
+		close(r.inter.confChangeC)
 		r.node.stop()
 		close(r.stopc)
 		r.wg.Wait()
