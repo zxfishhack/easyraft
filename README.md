@@ -99,6 +99,7 @@ snapshot_entries
 >keep how many log entries after snapshot
 
 ## Build && Test
+>assume you have install go 1.9
 ### On Windows
 1. go get github.com/coreos/etcd
 1. run build.bat build easyraft.dll
@@ -107,6 +108,8 @@ snapshot_entries
 1. type help in console get command list
 
 ### On Linux
+1. download tdm64-gcc-5.1.0-2.exe from http://tdm-gcc.tdragon.net/download
+1. install & add tdm-gcc-64/bin to Windows PATH
 1. go get github.com/coreos/etcd
 1. make makefile build libeasyraft.so & tests
 1. run ./bin/tests 1|2|3 start 3 node
