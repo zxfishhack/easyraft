@@ -31,3 +31,6 @@ easyraft:
 tests: $(OBJS) 
 	@echo $(OBJS)
 	$(CXX) $(addprefix objs/, $(OBJS)) -o bin/$@ $(LDFLAGS)
+
+clean:
+	rm -rf objs bin libs
