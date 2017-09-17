@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <cstring>
 
 extern kv g_kv;
 extern proposeWaiter g_pw;

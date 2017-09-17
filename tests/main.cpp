@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cstring>
 
 kv g_kv;
 proposeWaiter g_pw;
