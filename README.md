@@ -98,14 +98,16 @@ max_inflight_msgs
 snapshot_entries
 >keep how many log entries after snapshot
 
-## Test
+## Build && Test
 ### On Windows
+1. go get github.com/coreos/etcd
 1. run build.bat build easyraft.dll
 1. open tests\tests.sln with Visual Studio 2015
 1. run tests.ext 1|2|3 start 3 node
 1. type help in console get command list
 
 ### On Linux
+1. go get github.com/coreos/etcd
 1. make makefile build libeasyraft.so & tests
 1. run ./bin/tests 1|2|3 start 3 node
 1. type help in console get command list
