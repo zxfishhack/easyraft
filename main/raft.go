@@ -29,7 +29,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -145,6 +144,7 @@ func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 				return false
 			}
 		case raftpb.EntryConfChange:
+			plog.Printf("raftpb.EntryConfChange\n")
 			var cc raftpb.ConfChange
 			cc.Unmarshal(ents[i].Data)
 			rc.confState = *rc.node.ApplyConfChange(cc)
@@ -155,7 +155,7 @@ func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 				}
 			case raftpb.ConfChangeRemoveNode:
 				if cc.NodeID == rc.cfg.ID {
-					log.Println("I've been removed from the cluster! shutting down.")
+					plog.Println("I've been removed from the cluster! shutting down.")
 					return false
 				}
 				rc.transport.RemovePeer(types.ID(cc.NodeID))
@@ -297,6 +297,7 @@ func (rc *raftNode) startRaft() {
 
 	rc.inter.ctx.goAttach(rc.serveRaft)
 	rc.inter.ctx.goAttach(rc.serveChannels)
+	rc.inter.ctx.onRaftStarted()
 	plog.Notice("start raft done")
 }
 

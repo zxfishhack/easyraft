@@ -5,11 +5,19 @@
 #include <vector>
 #include <atomic>
 #include <cstring>
+#include "chan.h"
 
 extern kv g_kv;
 extern proposeWaiter g_pw;
 extern uint64_t self;
 extern std::atomic<uint64_t> g_done;
+extern chan<int> g_joinC;
+
+bool foo() {
+	return true;
+}
+
+bool test = foo();
 
 const char* raftState[] = {
 	"StateFollower",
@@ -47,6 +55,8 @@ int recoverFromSnapshot(void* ctx, void* data, uint64_t size) {
 	std::cout << "recoverFromSnapshot\n";
 	std::string str((char*)data, size);
 	g_kv.deserialize(str);
+	int t;
+	g_joinC.recv(t);
 	return 0;
 }
 

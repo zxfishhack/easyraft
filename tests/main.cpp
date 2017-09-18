@@ -8,16 +8,23 @@
 #include <atomic>
 #include <iomanip>
 #include <cstring>
+#include "chan.h"
 
 kv g_kv;
 proposeWaiter g_pw;
 uint64_t self;
 std::atomic<uint64_t> g_done;
+chan<int> g_joinC;
 
 const char* json[] = {
 	R"({"id":1,"cluster_id":1,"snap_count":10000,"waldir":"wal1","snapdir":"snap1","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
 	R"({"id":2,"cluster_id":1,"snap_count":10000,"waldir":"wal2","snapdir":"snap2","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
 	R"({"id":3,"cluster_id":1,"snap_count":10000,"waldir":"wal3","snapdir":"snap3","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
+};
+
+const char* joinConfig[] = {
+	R"({"id":4,"cluster_id":1,"snap_count":10000,"waldir":"wal4","snapdir":"snap4","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"},{"id":4,"url":"http://127.0.0.1:9004"}],"join":true,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
+	R"({"id":5,"cluster_id":1,"snap_count":10000,"waldir":"wal5","snapdir":"snap5","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"},{"id":5,"url":"http://127.0.0.1:9005"}],"join":true,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
 };
 
 int main(int argc, const char*argv[]) {
@@ -37,7 +44,13 @@ int main(int argc, const char*argv[]) {
 	RAFT_SetLogger("stdout", 0);
 	RAFT_SetLogLevel(RAFT_LOG_DEBUG);
 	self = atoi(argv[1]) - 1;
-	auto svr = RAFT_NewRaftServer(0, json[self]);
+	void* svr = NULL;
+	if (self >= 3) {
+		svr = RAFT_NewRaftServer(0, joinConfig[self - 3]);
+	} else {
+		g_joinC.close();
+		svr = RAFT_NewRaftServer(0, json[self]);
+	}
 	std::cout << svr << std::endl;
 	std::string pro;
 	std::vector<std::string> arg;
@@ -105,6 +118,15 @@ int main(int argc, const char*argv[]) {
 			if (propose_wait()) {
 				std::cout << "del done" << std::endl;
 			}
+		}
+		else if (cmd == "adds" && arg.size() >= 2u) {
+			RAFT_AddServer(svr, std::atoi(arg[0].c_str()), arg[1].c_str());
+		}
+		else if (cmd == "dels" && arg.size() >= 1u) {
+			RAFT_DelServer(svr, std::atoi(arg[0].c_str()));
+		}
+		else if (cmd == "gogogo") {
+			g_joinC.close();
 		}
 		else if (cmd == "bench") {
 			RAFT_SetLogger(0, 0);

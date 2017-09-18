@@ -112,16 +112,15 @@ func (r *raftServer) goAttach(f func()) {
 }
 
 func (r *raftServer) onStateReport() {
+	defer plog.Notice("onStateReport exit")
 	for {
 		select {
 		case <-r.stopc:
-			plog.Notice("onStateReport exit")
 			return
 		case s := <-r.inter.stateC:
 			C.OnStateChangeInternal(r.ctx, C.int(s))
 		}
 	}
-	plog.Notice("onStateReport exit")
 }
 
 func (r *raftServer) readCommits() {
@@ -168,6 +167,7 @@ const (
 )
 
 func (r *raftServer) purgeFile() {
+	defer plog.Notice("purgeFile exit")
 	var serrc, werrc <-chan error
 	if r.cfg.MaxSnapFiles > 0 {
 		plog.Infof("start purge snap file [maxFile: %d]\n", r.cfg.MaxSnapFiles)
@@ -183,10 +183,12 @@ func (r *raftServer) purgeFile() {
 	case e := <-werrc:
 		plog.Fatalf("failed to purge wal file %v", e)
 	case <-r.stopc:
-		plog.Notice("purgeFile exit")
 		return
 	}
-	plog.Notice("purgeFile exit")
+}
+
+func (r *raftServer) onRaftStarted() {
+	r.goAttach(r.purgeFile)
 }
 
 func null() unsafe.Pointer {
@@ -256,7 +258,6 @@ func NewRaftServer(ctx unsafe.Pointer, jsonConfig *C.char) unsafe.Pointer {
 	}
 	svr.node, svr.snap = newRaftNode(svr.cfg, svr.inter)
 	svr.goAttach(svr.readCommits)
-	svr.goAttach(svr.purgeFile)
 	cnt := ptr(atomic.AddUint64(&counter, 1))
 	holder[cnt] = svr
 	return cnt
