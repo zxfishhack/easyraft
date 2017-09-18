@@ -33,6 +33,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/coreos/etcd/etcdserver/stats"
@@ -65,6 +66,9 @@ type raftNode struct {
 	confState     raftpb.ConfState
 	snapshotIndex uint64
 	appliedIndex  uint64
+
+	peers  map[uint64]string
+	peerMu sync.Mutex
 
 	node        raft.Node
 	raftStorage *raft.MemoryStorage
@@ -144,7 +148,6 @@ func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 				return false
 			}
 		case raftpb.EntryConfChange:
-			plog.Printf("raftpb.EntryConfChange\n")
 			var cc raftpb.ConfChange
 			cc.Unmarshal(ents[i].Data)
 			rc.confState = *rc.node.ApplyConfChange(cc)
@@ -152,6 +155,9 @@ func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 			case raftpb.ConfChangeAddNode:
 				if len(cc.Context) > 0 {
 					rc.transport.AddPeer(types.ID(cc.NodeID), []string{string(cc.Context)})
+					rc.peerMu.Lock()
+					rc.peers[cc.NodeID] = string(cc.Context)
+					rc.peerMu.Unlock()
 				}
 			case raftpb.ConfChangeRemoveNode:
 				if cc.NodeID == rc.cfg.ID {
@@ -159,9 +165,15 @@ func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 					return false
 				}
 				rc.transport.RemovePeer(types.ID(cc.NodeID))
+				rc.peerMu.Lock()
+				delete(rc.peers, cc.NodeID)
+				rc.peerMu.Unlock()
 			case raftpb.ConfChangeUpdateNode:
 				if len(cc.Context) > 0 {
 					rc.transport.UpdatePeer(types.ID(cc.NodeID), []string{string(cc.Context)})
+					rc.peerMu.Lock()
+					rc.peers[cc.NodeID] = string(cc.Context)
+					rc.peerMu.Unlock()
 				}
 			}
 		}
@@ -255,12 +267,18 @@ func (rc *raftNode) startRaft() {
 	rc.wal = rc.replayWAL()
 
 	rpeers := make([]raft.Peer, len(rc.cfg.Peers))
+	rc.peerMu.Lock()
+	rc.peers = make(map[uint64]string)
 	for i := range rpeers {
 		rpeers[i] = raft.Peer{
 			ID: rc.cfg.Peers[i].ID,
 		}
+		if rc.cfg.Peers[i].ID != rc.cfg.ID {
+			rc.peers[rc.cfg.Peers[i].ID] = rc.cfg.Peers[i].URL
+		}
 		plog.Debugf("cluster peer: %d", rpeers[i].ID)
 	}
+	rc.peerMu.Unlock()
 	c := &raft.Config{
 		ID:              rc.cfg.ID,
 		ElectionTick:    rc.cfg.ElectionTick,
@@ -310,8 +328,8 @@ func (rc *raftNode) stop() {
 }
 
 func (rc *raftNode) stopHTTP() {
-	rc.transport.Stop()
 	close(rc.httpstopc)
+	rc.transport.Stop()
 	<-rc.httpdonec
 	plog.Notice("http server stopped")
 }
@@ -441,6 +459,11 @@ func (rc *raftNode) serveChannels() {
 			rc.raftStorage.Append(rd.Entries)
 			rc.transport.Send(rd.Messages)
 			if ok := rc.publishEntries(rc.entriesToApply(rd.CommittedEntries)); !ok {
+				select {
+				// has stopped
+				case <-rc.stopc:
+					return
+				}
 				rc.stop()
 				return
 			}
@@ -460,6 +483,13 @@ func (rc *raftNode) serveChannels() {
 }
 
 func (rc *raftNode) serveRaft() {
+	var svr *http.Server
+	defer plog.Notice("serveRaft exit")
+	defer func() {
+		if svr != nil {
+			svr.Shutdown(context.TODO())
+		}
+	}()
 	peer := rc.cfg.getPeerByID(rc.cfg.ID)
 	if peer == nil {
 		plog.Fatal("cannot find self peer.")
@@ -473,15 +503,14 @@ func (rc *raftNode) serveRaft() {
 	if err != nil {
 		plog.Fatalf("Failed to listen rafthttp (%v)", err)
 	}
-
-	err = (&http.Server{Handler: rc.transport.Handler()}).Serve(ln)
+	svr = &http.Server{Handler: rc.transport.Handler()}
+	err = svr.Serve(ln)
 	select {
 	case <-rc.httpstopc:
 	default:
 		plog.Fatalf("Failed to serve rafthttp (%v)", err)
 	}
 	close(rc.httpdonec)
-	plog.Notice("serveRaft exit")
 }
 
 func (rc *raftNode) Process(ctx context.Context, m raftpb.Message) error {
@@ -490,3 +519,26 @@ func (rc *raftNode) Process(ctx context.Context, m raftpb.Message) error {
 func (rc *raftNode) IsIDRemoved(id uint64) bool                           { return false }
 func (rc *raftNode) ReportUnreachable(id uint64)                          {}
 func (rc *raftNode) ReportSnapshot(id uint64, status raft.SnapshotStatus) {}
+
+func (rc *raftNode) getPeersStatus() []PeerStatus {
+	if rc.transport == nil {
+		return nil
+	}
+	rc.peerMu.Lock()
+	defer rc.peerMu.Unlock()
+	var ret = make([]PeerStatus, 0)
+	curTime := time.Now()
+	for id, uri := range rc.peers {
+		activeTime := rc.transport.ActiveSince(types.ID(id))
+		u, err := url.Parse(uri)
+		if err != nil {
+			continue
+		}
+		if activeTime.IsZero() {
+			ret = append(ret, PeerStatus{ID: id, Host: u.Host, ActiveTime: -1})
+		} else {
+			ret = append(ret, PeerStatus{ID: id, Host: u.Host, ActiveTime: int(curTime.Sub(activeTime).Seconds())})
+		}
+	}
+	return ret
+}

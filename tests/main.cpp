@@ -78,6 +78,9 @@ int main(int argc, const char*argv[]) {
 		return ret;
 	};
 	while(true) {
+		if (RAFT_GetPeersStatus(svr, ver, 256) == 0) {
+			printf("peers status %s\n", ver);
+		}
 		std::getline(std::cin, pro);
 		pro = pro.substr(0, pro.find_last_of('\n'));
 		splitCmd(pro, cmd, arg);
@@ -179,6 +182,8 @@ int main(int argc, const char*argv[]) {
 			//RAFT_Propose(svr, (void*)pro.c_str(), (int)pro.length());
 		}
 	}
+	// must stop pending recovery
+	g_joinC.close();
 	RAFT_DeleteRaftServer(svr);
 	return 0;
 }

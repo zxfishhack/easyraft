@@ -43,3 +43,7 @@ int RAFT_DelServer(void* raft, uint64_t id) {
 int RAFT_ChangeServer(void* raft, uint64_t id, const char* url) {
     return ChangeServer(raft, id, (char*)url);
 }
+
+int RAFT_GetPeersStatus(void* raft, char* buf, size_t size) {
+    return GetPeersStatus(raft, buf, size);
+}

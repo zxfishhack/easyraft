@@ -11,3 +11,4 @@ RAFT_Snapshot = RAFT_Snapshot
 RAFT_AddServer = RAFT_AddServer
 RAFT_DelServer = RAFT_DelServer
 RAFT_ChangeServer = RAFT_ChangeServer
+RAFT_GetPeersStatus = RAFT_GetPeersStatus

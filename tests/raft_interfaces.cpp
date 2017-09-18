@@ -6,6 +6,7 @@
 #include <atomic>
 #include <cstring>
 #include "chan.h"
+#include <easyraft.h>
 
 extern kv g_kv;
 extern proposeWaiter g_pw;

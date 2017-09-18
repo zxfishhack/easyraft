@@ -56,6 +56,12 @@ import (
 	"github.com/coreos/pkg/capnslog"
 )
 
+type PeerStatus struct {
+	ID         uint64 `json:"id"`
+	Host       string `json:"host"`
+	ActiveTime int    `json:"active"`
+}
+
 type raftServer struct {
 	inter *raftNodeInternal
 	snap  *snap.Snapshotter
@@ -124,6 +130,7 @@ func (r *raftServer) onStateReport() {
 }
 
 func (r *raftServer) readCommits() {
+	defer plog.Notice("readCommits exit")
 	for data := range r.inter.commitC {
 		if data == nil {
 			r.recoverFromSnapshot()
@@ -137,7 +144,6 @@ func (r *raftServer) readCommits() {
 	if err, ok := <-r.inter.errorC; ok {
 		plog.Fatal(err)
 	}
-	plog.Notice("readCommits exit")
 }
 
 func (r *raftServer) recoverFromSnapshot() {
@@ -324,6 +330,26 @@ func DelServer(p unsafe.Pointer, ID uint64, url *C.char) C.int {
 //export ChangeServer
 func ChangeServer(p unsafe.Pointer, ID uint64, url *C.char) C.int {
 	return updateServer(raftpb.ConfChangeUpdateNode, p, ID, url)
+}
+
+//export GetPeersStatus
+func GetPeersStatus(p unsafe.Pointer, buf *C.char, size C.size_t) C.int {
+	r := holder[p]
+	if r != nil {
+		status := r.node.getPeersStatus()
+		js, err := json.Marshal(status)
+		if err != nil {
+			return 2
+		}
+		jsb := C.CString(string(js))
+		defer C.free(unsafe.Pointer(jsb))
+		if int(size) <= len(js) {
+			return 3
+		}
+		C.strncpy(buf, jsb, size)
+		return 0
+	}
+	return 1
 }
 
 func main() {}

@@ -56,6 +56,7 @@ DLL_EXPORTS int   RAFT_Snapshot(void* raft);
 DLL_EXPORTS int   RAFT_AddServer(void* raft, uint64_t id, const char* url);
 DLL_EXPORTS int   RAFT_DelServer(void* raft, uint64_t id);
 DLL_EXPORTS int   RAFT_ChangeServer(void* raft, uint64_t id, const char* url);
+DLL_EXPORTS int   RAFT_GetPeersStatus(void* raft, char* buf, size_t size);
 
 #ifdef __cplusplus
 }
