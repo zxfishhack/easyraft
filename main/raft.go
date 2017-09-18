@@ -349,7 +349,7 @@ func (rc *raftNode) maybeTriggerSnapshot(force bool) {
 	snap, err := rc.raftStorage.CreateSnapshot(rc.appliedIndex, &rc.confState, data)
 
 	if err != nil {
-		if err != raft.ErrSnapOutOfDate {
+		if err == raft.ErrSnapOutOfDate {
 			return
 		}
 		panic(err)
