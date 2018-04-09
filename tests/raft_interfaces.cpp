@@ -28,6 +28,7 @@ const char* raftState[] = {
 };
 
 int getSnapshot(void* ctx, void** data, uint64_t* size) {
+	printf("%s %p\n", __FUNCTION__, ctx);
 	std::string s;
 	g_kv.serialize(s);
 	*size = s.length();
@@ -37,6 +38,7 @@ int getSnapshot(void* ctx, void** data, uint64_t* size) {
 }
 
 void freeSnapshot(void* ctx, void* data) {
+	printf("%s %p\n", __FUNCTION__, ctx);
 	if (data) {
 		free(data);
 	}
@@ -44,6 +46,7 @@ void freeSnapshot(void* ctx, void* data) {
 
 
 void onStateChange(void* ctx, int newState) {
+	printf("%s %p\n", __FUNCTION__, ctx);
 	if (newState < 0 || newState >= sizeof(raftState)) {
 		std::cout << "got wrong state " << newState << std::endl;
 	}
@@ -53,7 +56,7 @@ void onStateChange(void* ctx, int newState) {
 }
 
 int recoverFromSnapshot(void* ctx, void* data, uint64_t size) {
-	std::cout << "recoverFromSnapshot\n";
+	printf("%s %p\n", __FUNCTION__, ctx);
 	std::string str((char*)data, size);
 	g_kv.deserialize(str);
 	int t;
@@ -62,6 +65,7 @@ int recoverFromSnapshot(void* ctx, void* data, uint64_t size) {
 }
 
 int onCommit(void* ctx, void* data, uint64_t size) {
+	printf("%s %p\n", __FUNCTION__, ctx);
 	auto pr = static_cast<propose*>(data);
 	std::string line;
 	line.assign(pr->cmd, size - propose::header_length());
