@@ -23,9 +23,9 @@ const char* json[] = {
 };
 
 const char* json2[] = {
-	R"({"id":1,"cluster_id":2,"snap_count":10000,"waldir":"wal1","snapdir":"snap1","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
-	R"({"id":2,"cluster_id":2,"snap_count":10000,"waldir":"wal2","snapdir":"snap2","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
-	R"({"id":3,"cluster_id":2,"snap_count":10000,"waldir":"wal3","snapdir":"snap3","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
+	R"({"id":1,"cluster_id":2,"snap_count":10000,"waldir":"wal11","snapdir":"snap11","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
+	R"({"id":2,"cluster_id":2,"snap_count":10000,"waldir":"wal12","snapdir":"snap12","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
+	R"({"id":3,"cluster_id":2,"snap_count":10000,"waldir":"wal13","snapdir":"snap13","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
 };
 
 const char* joinConfig[] = {
@@ -109,11 +109,11 @@ int main(int argc, const char*argv[]) {
 		if (cmd == "exit") {
 			break;
 		}
+		svr = svrs[cid];
 		if (cid > 2) {
 			printf("clusterId error.");
 			continue;
 		}
-		svr = svrs[cid];
 		else if (cmd == "snapshot") {
 			RAFT_Snapshot(svr);
 		} 

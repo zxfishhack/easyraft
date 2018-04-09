@@ -77,7 +77,8 @@ int onCommit(void* ctx, void* data, uint64_t size) {
 	}
 	std::string cmd;
 	std::vector<std::string> arg;
-	splitCmd(line, cmd, arg);
+	uint64_t cid;
+	splitCmd(line, cmd, cid, arg);
 	if (cmd == "set" && arg.size() >= 2u) {
 		g_kv.put(arg[0], arg[1]);
 	}

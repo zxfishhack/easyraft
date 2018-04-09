@@ -38,7 +38,7 @@ private:
 	volatile uint64_t seq_;
 };
 
-void splitCmd(const std::string& line, std::string& cmd, std::vector<std::string>& arg);
+void splitCmd(const std::string& line, std::string& cmd, uint64_t& cid, std::vector<std::string>& arg);
 int getSnapshot(void* ctx, void** data, uint64_t* size);
 void freeSnapshot(void* ctx, void* data);
 void onStateChange(void* ctx, int newState);

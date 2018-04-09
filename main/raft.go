@@ -29,7 +29,6 @@ package main
 
 import (
 	"context"
-	"net/http"
 	"net/url"
 	"os"
 	"strconv"
@@ -43,7 +42,7 @@ import (
 	"github.com/coreos/etcd/raft"
 	"github.com/coreos/etcd/raft/raftpb"
 	"github.com/coreos/etcd/rafthttp"
-	"github.com/coreos/etcd/snap"
+	snap "github.com/coreos/etcd/raftsnap"
 	"github.com/coreos/etcd/wal"
 	"github.com/coreos/etcd/wal/walpb"
 )
@@ -488,11 +487,6 @@ func (rc *raftNode) serveChannels() {
 func (rc *raftNode) serveRaft() {
 	var svr *raftHttpHandler
 	defer plog.Notice("serveRaft exit")
-	defer func() {
-		if svr != nil {
-			svr
-		}
-	}()
 	peer := rc.cfg.getPeerByID(rc.cfg.ID)
 	if peer == nil {
 		plog.Fatal("cannot find self peer.")
@@ -506,14 +500,14 @@ func (rc *raftNode) serveRaft() {
 	}
 	defer func() {
 		ReleaseRaftHttpHandler(url)
-	}
+	}()
 	h := rc.transport.Handler()
 	if err := svr.AddHandler(rc.cfg.ClusterID, h); err != nil {
 		plog.Fatalf("Add Handler failed.")
 	}
 	defer func() {
-		svr.RemoveHandler(h)
-	}
+		svr.RemoveHandler(rc.cfg.ClusterID)
+	}()
 	stopFlag := false
 	for !stopFlag {
 		select {

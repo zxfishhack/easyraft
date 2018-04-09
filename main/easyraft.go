@@ -50,7 +50,7 @@ import (
 	"github.com/coreos/etcd/pkg/fileutil"
 
 	"github.com/coreos/etcd/raft"
-	"github.com/coreos/etcd/snap"
+	snap "github.com/coreos/etcd/raftsnap"
 
 	"github.com/coreos/etcd/raft/raftpb"
 	"github.com/coreos/pkg/capnslog"

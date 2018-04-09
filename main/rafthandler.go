@@ -9,33 +9,34 @@ import (
 )
 
 type raftHttpHandler struct {
-	svr *http.Server
-	mu sync.RWMutex
+	svr      *http.Server
+	mu       sync.RWMutex
 	handlers map[uint64]http.Handler
-	ln *stoppableListener
-	stopc chan struct{}
-	donec chan struct{}
+	ln       *stoppableListener
+	stopc    chan struct{}
+	donec    chan struct{}
 }
 
-func (rh *raftHttpHandler)AddHandler(cid uint64, h http.Handler) error {
+func (rh *raftHttpHandler) AddHandler(cid uint64, h http.Handler) error {
 	rh.mu.Lock()
 	defer rh.mu.Unlock()
 	if _, ok := rh.handlers[cid]; ok {
 		return os.ErrExist
 	}
 	rh.handlers[cid] = h
+	return nil
 }
 
-func (rh *raftHttpHandler)RemoveHandler(cid uint64) error {
+func (rh *raftHttpHandler) RemoveHandler(cid uint64) {
 	rh.mu.Lock()
 	defer rh.mu.Unlock()
 	delete(rh.handlers, cid)
 }
 
-func (rh *raftHttpHandler)Destory() error {
+func (rh *raftHttpHandler) Destory() error {
 	rh.mu.RLock()
 	defer rh.mu.RUnlock()
-	for _,_ = range rh.handlers {
+	for _, _ = range rh.handlers {
 		return os.ErrPermission
 	}
 	close(rh.stopc)
@@ -43,15 +44,20 @@ func (rh *raftHttpHandler)Destory() error {
 	case <-rh.donec:
 	default:
 	}
+	return nil
 }
 
-func (rh *raftHttpHandler)ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	 gcid, err := strconv.ParseUint(r.Header.Get("X-Etcd-Cluster-ID"), 10, 64)
-	 rh.mu.RLock()
-	 defer rh.mu.RUnlock()
-	 if h, ok := rh.handlers(gcid); ok {
-		 return h.ServeHTTP(w, r)
-	 }
+func (rh *raftHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	gcid, err := strconv.ParseUint(r.Header.Get("X-Etcd-Cluster-ID"), 10, 64)
+	rh.mu.RLock()
+	defer rh.mu.RUnlock()
+	if err != nil {
+		for _, h := range rh.handlers {
+			h.ServeHTTP(w, r)
+		}
+	} else if h, ok := rh.handlers[gcid]; ok {
+		h.ServeHTTP(w, r)
+	}
 }
 
 func newRaftHttpHandler(url *url.URL) (rh *raftHttpHandler, err error) {
@@ -59,8 +65,8 @@ func newRaftHttpHandler(url *url.URL) (rh *raftHttpHandler, err error) {
 
 	rh = &raftHttpHandler{
 		handlers: make(map[uint64]http.Handler),
-		stopc: make(chan struct{}, 1),
-		donec: make(chan struct{}, 1),
+		stopc:    make(chan struct{}, 1),
+		donec:    make(chan struct{}, 1),
 	}
 	rh.ln, err = newStoppableListener(url.Host, rh.stopc)
 	if err != nil {
@@ -70,9 +76,9 @@ func newRaftHttpHandler(url *url.URL) (rh *raftHttpHandler, err error) {
 		Handler: rh,
 	}
 	go func() {
-		e := rh.svr.Serve(rh.ln)
+		rh.svr.Serve(rh.ln)
 		select {
-		case <-rh.httpstopc:
+		case <-rh.stopc:
 		default:
 			plog.Fatalf("Failed to serve rafthttp (%v)", err)
 		}
@@ -81,13 +87,13 @@ func newRaftHttpHandler(url *url.URL) (rh *raftHttpHandler, err error) {
 	return rh, err
 }
 
-type holder struct {
-	v interface{}
-	c int64
-	cf func(v interface{}) 
+type objHolder struct {
+	v  interface{}
+	c  int64
+	cf func(v interface{})
 }
 
-var objs map[string]*holder
+var objs map[string]*objHolder
 var objMtx sync.RWMutex
 var objOnce sync.Once
 
@@ -98,12 +104,13 @@ func lookup(k string) interface{} {
 		obj.c = obj.c + 1
 		return obj.v
 	}
+	return nil
 }
 
 func add(k string, v interface{}, cf func(v interface{})) interface{} {
-	tmp := &holder{
-		v: v,
-		c: 0,
+	tmp := &objHolder{
+		v:  v,
+		c:  0,
 		cf: cf,
 	}
 	objMtx.Lock()
@@ -126,8 +133,8 @@ func release(k string) {
 }
 
 func GetRaftHttpHandler(url *url.URL) (rh *raftHttpHandler, err error) {
-	once.Do(func() {
-		objs = make(map[string]*holder)
+	objOnce.Do(func() {
+		objs = make(map[string]*objHolder)
 	})
 	if r := lookup(url.Host); r != nil {
 		return r.(*raftHttpHandler), nil
@@ -136,7 +143,7 @@ func GetRaftHttpHandler(url *url.URL) (rh *raftHttpHandler, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return add(url.Host, rh, func(v interface{}){
+	return add(url.Host, rh, func(v interface{}) {
 		v.(*raftHttpHandler).Destory()
 	}).(*raftHttpHandler), nil
 }
