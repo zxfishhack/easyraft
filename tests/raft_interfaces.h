@@ -8,6 +8,7 @@
 
 struct propose {
 	uint64_t id;
+	uint64_t cid;
 	uint64_t seq;
 	char cmd[1];
 	constexpr static size_t header_length() {

@@ -40,6 +40,7 @@ type peer struct {
 type config struct {
 	ID                uint64 `json:"id"`
 	ClusterID         uint64 `json:"cluster_id"`
+	ManualSnap        bool   `json:"manual_snap"`
 	SnapCount         uint64 `json:"snap_count"`
 	Waldir            string `json:"waldir"`
 	Snapdir           string `json:"snapdir"`

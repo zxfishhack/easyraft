@@ -22,6 +22,12 @@ const char* json[] = {
 	R"({"id":3,"cluster_id":1,"snap_count":10000,"waldir":"wal3","snapdir":"snap3","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
 };
 
+const char* json2[] = {
+	R"({"id":1,"cluster_id":2,"snap_count":10000,"waldir":"wal1","snapdir":"snap1","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
+	R"({"id":2,"cluster_id":2,"snap_count":10000,"waldir":"wal2","snapdir":"snap2","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
+	R"({"id":3,"cluster_id":2,"snap_count":10000,"waldir":"wal3","snapdir":"snap3","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"}],"join":false,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
+};
+
 const char* joinConfig[] = {
 	R"({"id":4,"cluster_id":1,"snap_count":10000,"waldir":"wal4","snapdir":"snap4","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"},{"id":4,"url":"http://127.0.0.1:9004"}],"join":true,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
 	R"({"id":5,"cluster_id":1,"snap_count":10000,"waldir":"wal5","snapdir":"snap5","tickms":100,"election_tick":10,"heartbeat_tick":1,"boostrap_timeout":1,"peers":[{"id":1,"url":"http://127.0.0.1:9001"},{"id":2,"url":"http://127.0.0.1:9002"},{"id":3,"url":"http://127.0.0.1:9003"},{"id":5,"url":"http://127.0.0.1:9005"}],"join":true,"max_size_per_msg":1048576,"max_inflight_msgs":256,"snapshot_entries":1000,"max_snap_files":5,"max_wal_files":5})",
@@ -32,30 +38,39 @@ int main(int argc, const char*argv[]) {
 		return -1;
 	}
 	char ver[256];
-	Context ctx;
-	ctx.freeSnapshot = freeSnapshot;
-	ctx.getSnapshot = getSnapshot;
-	ctx.onCommit = onCommit;
-	ctx.onStateChange = onStateChange;
-	ctx.recoverFromSnapshot = recoverFromSnapshot;
+	RAFT_Callback cb;
+	cb.freeSnapshot = freeSnapshot;
+	cb.getSnapshot = getSnapshot;
+	cb.onCommit = onCommit;
+	cb.onStateChange = onStateChange;
+	cb.recoverFromSnapshot = recoverFromSnapshot;
+
 	RAFT_GetVersion(ver, 256);
 	std::cout << ver << std::endl;
-	RAFT_SetContext(&ctx);
+
+	RAFT_SetCallback(&cb);
 	RAFT_SetLogger("stdout", 0);
 	RAFT_SetLogLevel(RAFT_LOG_DEBUG);
+
 	self = atoi(argv[1]) - 1;
-	void* svr = NULL;
+
+	void* svr = NULL, *svr2 = NULL;
+
 	if (self >= 3) {
 		svr = RAFT_NewRaftServer(0, joinConfig[self - 3]);
 	} else {
 		g_joinC.close();
-		svr = RAFT_NewRaftServer(0, json[self]);
+		svr = RAFT_NewRaftServer((void*)1, json[self]);
+		svr2 = RAFT_NewRaftServer((void*)2, json2[self]);
 	}
+
 	std::cout << svr << std::endl;
 	std::string pro;
 	std::vector<std::string> arg;
 	std::string cmd;
 	std::string v;
+	uint64_t cid = 0;
+
 	auto propose_wait = [&](bool wait = true) ->bool
 	{
 		auto ret = false;
@@ -63,6 +78,7 @@ int main(int argc, const char*argv[]) {
 		auto mem = new char[size];
 		auto& pr = *reinterpret_cast<propose*>(mem);
 		pr.id = self;
+		pr.cid = cid;
 		pr.seq = g_pw.getSeq();
 		memcpy(pr.cmd, pro.c_str(), pro.length());
 		if (RAFT_Propose(svr, mem, (int)size) != 0) {
@@ -77,16 +93,27 @@ int main(int argc, const char*argv[]) {
 		delete[]mem;
 		return ret;
 	};
+
+	void* svrs[3] = {0, svr, svr2};
+
 	while(true) {
-		if (RAFT_GetPeersStatus(svr, ver, 256) == 0) {
-			printf("peers status %s\n", ver);
+		if (RAFT_GetPeersStatus(svrs[1], ver, 256) == 0) {
+			printf("1: peers status %s\n", ver);
+		}
+		if (RAFT_GetPeersStatus(svrs[2], ver, 256) == 0) {
+			printf("2: peers status %s\n", ver);
 		}
 		std::getline(std::cin, pro);
 		pro = pro.substr(0, pro.find_last_of('\n'));
-		splitCmd(pro, cmd, arg);
+		splitCmd(pro, cmd, cid, arg);
 		if (cmd == "exit") {
 			break;
-		} 
+		}
+		if (cid > 2) {
+			printf("clusterId error.");
+			continue;
+		}
+		svr = svrs[cid];
 		else if (cmd == "snapshot") {
 			RAFT_Snapshot(svr);
 		} 
@@ -170,12 +197,12 @@ int main(int argc, const char*argv[]) {
 			RAFT_SetLogger("stdout", 0);
 		}
 		else if (cmd == "help") {
-			std::cout << "exit     : end server"                << std::endl;
-			std::cout << "snapshot : force generate a snapshot" << std::endl;
-			std::cout << "get k    : dirty get k v"             << std::endl;
-			std::cout << "sget k   : safe get k v"              << std::endl;
-			std::cout << "app k v  : append k v"                << std::endl;
-			std::cout << "del k    : delete key k"              << std::endl;
+			std::cout << "exit           : end server"                << std::endl;
+			std::cout << "snapshot <cid> : force generate a snapshot" << std::endl;
+			std::cout << "get k    <cid> : dirty get k v"             << std::endl;
+			std::cout << "sget k   <cid> : safe get k v"              << std::endl;
+			std::cout << "app k v  <cid> : append k v"                << std::endl;
+			std::cout << "del k    <cid> : delete key k"              << std::endl;
 		}
 		else {
 			std::cout << "illegal command, type help to get command list." << std::endl;
@@ -188,7 +215,7 @@ int main(int argc, const char*argv[]) {
 	return 0;
 }
 
-void splitCmd(const std::string& line_, std::string& cmd, std::vector<std::string>& arg) {
+void splitCmd(const std::string& line_, std::string& cmd, uint64_t& cid, std::vector<std::string>& arg) {
 	auto line = line_;
 	arg.clear();
 	auto inColon = false;
@@ -203,10 +230,13 @@ void splitCmd(const std::string& line_, std::string& cmd, std::vector<std::strin
 	auto pos = line.find_first_of('\x0');
 	cmd = line.substr(0, pos);
 	std::for_each(cmd.begin(), cmd.end(), [](char c) -> char { return tolower(c); });
+	cid = 0;
 	while (pos != line.npos) {
 		auto beg = pos + 1;
 		pos = line.find_first_of('\x0', beg);
-		if (pos != line.npos) {
+		if (cid == 0) {
+			cid = atoll(line.substr(beg, pos - beg).c_str());
+		} else if (pos != line.npos) {
 			arg.push_back(line.substr(beg, pos - beg));
 		}
 		else {

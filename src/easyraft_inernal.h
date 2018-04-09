@@ -3,28 +3,28 @@
 
 #include "easyraft.h"
 
-extern struct Context context;
+extern struct RAFT_Callback cb;
 
 #ifdef _CGO_BUILD_
 static int GetSnapshotInternal(void* ctx, void** data, uint64_t* size) {
-    return context.getSnapshot(ctx, data, size);
+    return cb.getSnapshot(ctx, data, size);
 }
 static void FreeSnapshotInternal(void* ctx, void* data) {
-    return context.freeSnapshot(ctx, data);
+    return cb.freeSnapshot(ctx, data);
 }
 static void OnStateChangeInternal(void* ctx, int newState) {
-    context.onStateChange(ctx, newState);
+    cb.onStateChange(ctx, newState);
 }
 
 static int RecoverFromSnapshotInternal(void* ctx, void* data, uint64_t size) {
-    return context.recoverFromSnapshot(ctx, data, size);
+    return cb.recoverFromSnapshot(ctx, data, size);
 }
 
 static int OnCommitInternal(void* ctx, void* data, uint64_t size) {
-    return context.onCommit(ctx, data, size);
+    return cb.onCommit(ctx, data, size);
 }
 
-struct Context context;
+struct RAFT_Callback cb;
 #endif
 
 #endif

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-struct Context {
+struct RAFT_Callback {
     int (*getSnapshot)(void* ctx, void** data, uint64_t* size);
     void (*freeSnapshot)(void* ctx, void* data);
     void (*onStateChange)(void* ctx, int newState);
@@ -45,7 +45,7 @@ extern "C" {
 // TRACE is for (potentially) call by call tracing of programs.
 #define RAFT_LOG_TRACE     5
 
-DLL_EXPORTS void  RAFT_SetContext(struct Context* ctx);
+DLL_EXPORTS void  RAFT_SetCallback(struct RAFT_Callback* ctx);
 DLL_EXPORTS int   RAFT_SetLogger(const char* logPath, int debug);
 DLL_EXPORTS int   RAFT_SetLogLevel(int logLevel);
 DLL_EXPORTS void  RAFT_GetVersion(char * v, size_t n);

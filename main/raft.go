@@ -356,6 +356,9 @@ func (rc *raftNode) maybeTriggerSnapshot(force bool) {
 	if rc.appliedIndex-rc.snapshotIndex <= rc.cfg.SnapCount && !force {
 		return
 	}
+	if rc.cfg.ManualSnap && !force {
+		return
+	}
 	if rc.appliedIndex <= rc.snapshotIndex {
 		return
 	}
@@ -483,11 +486,11 @@ func (rc *raftNode) serveChannels() {
 }
 
 func (rc *raftNode) serveRaft() {
-	var svr *http.Server
+	var svr *raftHttpHandler
 	defer plog.Notice("serveRaft exit")
 	defer func() {
 		if svr != nil {
-			svr.Shutdown(context.TODO())
+			svr
 		}
 	}()
 	peer := rc.cfg.getPeerByID(rc.cfg.ID)
@@ -498,17 +501,26 @@ func (rc *raftNode) serveRaft() {
 	if err != nil {
 		plog.Fatalf("Failed parsing URL (%v)", err)
 	}
-	plog.Infof("start listen @ %v", url)
-	ln, err := newStoppableListener(url.Host, rc.httpstopc)
-	if err != nil {
-		plog.Fatalf("Failed to listen rafthttp (%v)", err)
+	if svr, err = GetRaftHttpHandler(url); err != nil {
+		plog.Fatalf("Failed Get Raft Http Handler %v", err)
 	}
-	svr = &http.Server{Handler: rc.transport.Handler()}
-	err = svr.Serve(ln)
-	select {
-	case <-rc.httpstopc:
-	default:
-		plog.Fatalf("Failed to serve rafthttp (%v)", err)
+	defer func() {
+		ReleaseRaftHttpHandler(url)
+	}
+	h := rc.transport.Handler()
+	if err := svr.AddHandler(rc.cfg.ClusterID, h); err != nil {
+		plog.Fatalf("Add Handler failed.")
+	}
+	defer func() {
+		svr.RemoveHandler(h)
+	}
+	stopFlag := false
+	for !stopFlag {
+		select {
+		case <-rc.httpstopc:
+			stopFlag = true
+		default:
+		}
 	}
 	close(rc.httpdonec)
 }

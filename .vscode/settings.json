@@ -1,0 +1,13 @@
+{
+   "files.associations": {
+      "vector": "cpp",
+      "xstring": "cpp",
+      "xutility": "cpp",
+      "atomic": "cpp",
+      "deque": "cpp",
+      "ios": "cpp",
+      "system_error": "cpp",
+      "xiosbase": "cpp",
+      "xtree": "cpp"
+   }
+}

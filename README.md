@@ -3,7 +3,7 @@ RAFT C wrapper, origin go implement by coreos([Raft](https://github.com/coreos/e
 
 ## API
 ```
-DLL_EXPORTS void  RAFT_SetContext(struct Context* ctx);
+DLL_EXPORTS void  RAFT_SetCallback(struct RAFT_Callback* ctx);
 DLL_EXPORTS int   RAFT_SetLogger(const char* logPath, int debug);
 DLL_EXPORTS int   RAFT_SetLogLevel(int logLevel);
 DLL_EXPORTS void  RAFT_GetVersion(char * v, size_t n);
@@ -17,7 +17,7 @@ DLL_EXPORTS int   RAFT_ChangeServer(void* raft, uint64_t id, const char* url);
 ```
 ## Usage
 
-1. Setup callback context with RAFT_SetContext
+1. Setup callback with RAFT_SetCallback
 1. Create Raft Server instance with RAFT_NewRaftServer
 1. Using RAFT_Propose to do propose
 1. Using RAFT_Snapshot force create a snapshot
@@ -27,11 +27,11 @@ DLL_EXPORTS int   RAFT_ChangeServer(void* raft, uint64_t id, const char* url);
 ## Callback
 Callback|Usage|Return Value|Comment
 --------|-----|------------|------
-Context::getSnapshot|Raft State want a snapshot|0 meaning success|
-Context::freeSnapshot|free the memory allocator by Context::getSnapshot||
-Context::onStateChange|Raft State notify current state||
-Context::recoverFromSnapshot|recovery server state with a snapshot|0 meaing success|WARNING: return non-zero will panic
-Context::onCommit|notify a log is commited|0 meaning success|
+RAFT_Callback::getSnapshot|Raft State want a snapshot|0 meaning success|
+RAFT_Callback::freeSnapshot|free the memory allocator by RAFT_Callback::getSnapshot||
+RAFT_Callback::onStateChange|Raft State notify current state||
+RAFT_Callback::recoverFromSnapshot|recovery server state with a snapshot|0 meaing success|WARNING: return non-zero will panic
+RAFT_Callback::onCommit|notify a log is commited|0 meaning success|
 
 ## Config
 ```

@@ -1,7 +1,7 @@
 #include <libeasyraft.h>
 
-void RAFT_SetContext(struct Context* ctx) {
-    context = *ctx;
+void RAFT_SetCallback(struct RAFT_Callback* ctx) {
+    cb = *ctx;
 }
 
 int RAFT_SetLogger(const char* logPath, int debug) {
