@@ -49,7 +49,7 @@ import (
 
 type raftNodeInternal struct {
 	proposeC    chan []byte
-	snapshotC   chan int
+	snapshotC   chan context.Context
 	confChangeC chan raftpb.ConfChange
 	commitC     chan *[]byte
 	errorC      chan error
@@ -351,7 +351,13 @@ func (rc *raftNode) publishSnapshot(snapshotToSave raftpb.Snapshot) {
 	rc.appliedIndex = snapshotToSave.Metadata.Index
 }
 
-func (rc *raftNode) maybeTriggerSnapshot(force bool) {
+func (rc *raftNode) maybeTriggerSnapshot(force bool, ctx context.Context) {
+	var err error
+	defer func() {
+		if ctx != nil {
+			ctx.Value("done").(chan error) <- err
+		}
+	}()
 	if rc.appliedIndex-rc.snapshotIndex <= rc.cfg.SnapCount && !force {
 		return
 	}
@@ -384,13 +390,12 @@ func (rc *raftNode) maybeTriggerSnapshot(force bool) {
 	}
 	if err := rc.raftStorage.Compact(compactIndex); err != nil {
 		if err == raft.ErrCompacted {
+			err = nil
 			return
 		}
 		panic(err)
 	}
-
 	plog.Infof("compacted log at index %d", compactIndex)
-
 }
 
 func (rc *raftNode) serveChannels() {
@@ -431,11 +436,11 @@ func (rc *raftNode) serveChannels() {
 					cc.ID = confChangeCount
 					rc.node.ProposeConfChange(context.TODO(), cc)
 				}
-			case _, ok := <-rc.inter.snapshotC:
+			case ctx, ok := <-rc.inter.snapshotC:
 				if !ok {
 					rc.inter.snapshotC = nil
 				} else {
-					rc.maybeTriggerSnapshot(true)
+					rc.maybeTriggerSnapshot(true, ctx)
 				}
 			}
 		}
@@ -469,7 +474,7 @@ func (rc *raftNode) serveChannels() {
 				rc.stop()
 				return
 			}
-			rc.maybeTriggerSnapshot(false)
+			rc.maybeTriggerSnapshot(false, nil)
 			rc.node.Advance()
 			if rd.SoftState != nil {
 				rc.inter.stateC <- rd.RaftState

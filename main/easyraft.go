@@ -46,6 +46,7 @@ import (
 	"sync/atomic"
 	"time"
 	"unsafe"
+	"context"
 
 	"github.com/coreos/etcd/pkg/fileutil"
 
@@ -248,7 +249,7 @@ func NewRaftServer(ctx unsafe.Pointer, jsonConfig *C.char) unsafe.Pointer {
 	svr := &raftServer{
 		inter: &raftNodeInternal{
 			proposeC:    make(chan []byte),
-			snapshotC:   make(chan int),
+			snapshotC:   make(chan context.Context),
 			confChangeC: make(chan raftpb.ConfChange),
 			stateC:      make(chan raft.StateType),
 		},
@@ -297,11 +298,24 @@ func Propose(p unsafe.Pointer, data unsafe.Pointer, size C.int) C.int {
 //export Snapshot
 func Snapshot(p unsafe.Pointer) C.int {
 	r := holder[p]
+	done := make(chan error)
+	ctx := context.WithValue(context.TODO(), "done", done)
 	if r != nil {
-		r.inter.snapshotC <- 1
-		return 0
+		r.inter.snapshotC <- ctx
 	}
-	return 1
+	select {
+	case <- ctx.Done():
+		if ctx.Err() != nil {
+			plog.Error("snapshot error", ctx.Err())
+			return 1
+		}
+	case err := <- done:
+		if err != nil {
+			plog.Error("snapshot error", err)
+			return 1
+		}
+	}
+	return 0
 }
 
 func updateServer(updateType raftpb.ConfChangeType, p unsafe.Pointer, ID uint64, url *C.char) C.int {
