@@ -42,5 +42,5 @@ void splitCmd(const std::string& line, std::string& cmd, uint64_t& cid, std::vec
 int getSnapshot(void* ctx, void** data, uint64_t* size);
 void freeSnapshot(void* ctx, void* data);
 void onStateChange(void* ctx, int newState);
-int recoverFromSnapshot(void* ctx, void* data, uint64_t size);
-int onCommit(void* ctx, void* data, uint64_t size);
+int recoverFromSnapshot(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index);
+int onCommit(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index);

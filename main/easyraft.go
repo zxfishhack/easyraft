@@ -132,13 +132,13 @@ func (r *raftServer) onStateReport() {
 
 func (r *raftServer) readCommits() {
 	defer plog.Notice("readCommits exit")
-	for data := range r.inter.commitC {
-		if data == nil {
+	for ent := range r.inter.commitC {
+		if ent == nil {
 			r.recoverFromSnapshot()
 		} else {
-			d := *data
+			d := ent.Data
 			if len(d) > 0 {
-				C.OnCommitInternal(r.ctx, unsafe.Pointer(&d[0]), C.uint64_t(len(d)))
+				C.OnCommitInternal(r.ctx, unsafe.Pointer(&d[0]), C.uint64_t(len(d)), C.uint64_t(ent.Term), C.uint64_t(ent.Index))
 			}
 		}
 	}
@@ -160,9 +160,9 @@ func (r *raftServer) recoverFromSnapshot() {
 	snapSize := len(snapshot.Data)
 	var ret C.int
 	if snapSize > 0 {
-		ret = C.RecoverFromSnapshotInternal(r.ctx, unsafe.Pointer(&snapshot.Data[0]), C.uint64_t(snapSize))
+		ret = C.RecoverFromSnapshotInternal(r.ctx, unsafe.Pointer(&snapshot.Data[0]), C.uint64_t(snapSize), C.uint64_t(snapshot.Metadata.Term), C.uint64_t(snapshot.Metadata.Index))
 	} else {
-		ret = C.RecoverFromSnapshotInternal(r.ctx, null(), 0)
+		ret = C.RecoverFromSnapshotInternal(r.ctx, null(), 0, C.uint64_t(snapshot.Metadata.Term), C.uint64_t(snapshot.Metadata.Index))
 	}
 	if ret != 0 {
 		plog.Panic(fmt.Errorf("recover from snapshot failed[%d]", ret))

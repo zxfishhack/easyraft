@@ -59,6 +59,7 @@ RAFT_Callback::onCommit|notify a log is commited|0 meaning success|
 	"join" : false,
 	"max_size_per_msg" : 1048576,
 	"max_inflight_msgs" : 256,
+	"manual_snap": false,
 	"snapshot_entries" : 1000
 }
 ```
@@ -95,6 +96,9 @@ max_size_per_msg
 max_inflight_msgs
 >the max number of in-flight append messages during optimistic replication phase
 
+manual_snap
+>manual trigger snapshot if true
+
 snapshot_entries
 >keep how many log entries after snapshot
 
@@ -104,13 +108,13 @@ snapshot_entries
 1. download tdm64-gcc-5.1.0-2.exe from http://tdm-gcc.tdragon.net/download
 1. install & add tdm-gcc-64/bin to Windows PATH
 1. go get github.com/coreos/etcd
-1. run build.bat build easyraft.dll
+1. run 'build.bat' build easyraft.dll
 1. open tests\tests.sln with Visual Studio 2015
 1. run bin\test.exe 1, bin\test.exe 2, bin\tests.exe 3
 1. type help in console get command list
 
 ### On Linux
 1. go get github.com/coreos/etcd
-1. make makefile build libeasyraft.so & tests
+1. run 'make makefile' build libeasyraft.so & tests
 1. run ./bin/tests 1,./bin/tests 2, ./bin/tests 3
 1. type help in console get command list

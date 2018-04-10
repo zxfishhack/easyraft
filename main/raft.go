@@ -51,7 +51,7 @@ type raftNodeInternal struct {
 	proposeC    chan []byte
 	snapshotC   chan context.Context
 	confChangeC chan raftpb.ConfChange
-	commitC     chan *[]byte
+	commitC     chan *raftpb.Entry
 	errorC      chan error
 	stateC      chan raft.StateType
 	ctx         *raftServer
@@ -93,7 +93,7 @@ func newRaftNode(cfg config, r *raftNodeInternal) (*raftNode, *snap.Snapshotter)
 
 		snapshotterReady: make(chan *snap.Snapshotter, 1),
 	}
-	rc.inter.commitC = make(chan *[]byte)
+	rc.inter.commitC = make(chan *raftpb.Entry)
 	rc.inter.errorC = make(chan error)
 
 	rc.inter.ctx.goAttach(rc.startRaft)
@@ -142,7 +142,7 @@ func (rc *raftNode) publishEntries(ents []raftpb.Entry) bool {
 				break
 			}
 			select {
-			case rc.inter.commitC <- &ents[i].Data:
+			case rc.inter.commitC <- &ents[i]:
 			case <-rc.stopc:
 				return false
 			}

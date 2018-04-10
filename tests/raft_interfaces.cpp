@@ -56,7 +56,7 @@ void onStateChange(void* ctx, int newState) {
 	}
 }
 
-int recoverFromSnapshot(void* ctx, void* data, uint64_t size) {
+int recoverFromSnapshot(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index) {
 	printf("%s %p\n", __FUNCTION__, ctx);
 	std::string str((char*)data, size);
 	g_kv.deserialize(str);
@@ -65,7 +65,7 @@ int recoverFromSnapshot(void* ctx, void* data, uint64_t size) {
 	return 0;
 }
 
-int onCommit(void* ctx, void* data, uint64_t size) {
+int onCommit(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index) {
 	printf("%s %p\n", __FUNCTION__, ctx);
 	auto pr = static_cast<propose*>(data);
 	if (ctx == (void*)1)

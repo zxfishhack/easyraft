@@ -16,12 +16,12 @@ static void OnStateChangeInternal(void* ctx, int newState) {
     cb.onStateChange(ctx, newState);
 }
 
-static int RecoverFromSnapshotInternal(void* ctx, void* data, uint64_t size) {
-    return cb.recoverFromSnapshot(ctx, data, size);
+static int RecoverFromSnapshotInternal(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index) {
+    return cb.recoverFromSnapshot(ctx, data, size, term, index);
 }
 
-static int OnCommitInternal(void* ctx, void* data, uint64_t size) {
-    return cb.onCommit(ctx, data, size);
+static int OnCommitInternal(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index) {
+    return cb.onCommit(ctx, data, size, term, index);
 }
 
 struct RAFT_Callback cb;

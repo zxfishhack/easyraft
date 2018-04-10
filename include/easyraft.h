@@ -7,8 +7,8 @@ struct RAFT_Callback {
     int (*getSnapshot)(void* ctx, void** data, uint64_t* size);
     void (*freeSnapshot)(void* ctx, void* data);
     void (*onStateChange)(void* ctx, int newState);
-    int (*recoverFromSnapshot)(void* ctx, void* data, uint64_t size);
-    int (*onCommit)(void* ctx, void* data, uint64_t size);
+    int (*recoverFromSnapshot)(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index);
+    int (*onCommit)(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index);
 };
 
 #ifdef _WIN32
