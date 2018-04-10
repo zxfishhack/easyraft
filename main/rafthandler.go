@@ -49,13 +49,18 @@ func (rh *raftHttpHandler) Destory() error {
 
 func (rh *raftHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	gcid, err := strconv.ParseUint(r.Header.Get("X-Etcd-Cluster-ID"), 10, 64)
+	var h http.Handler
 	rh.mu.RLock()
-	defer rh.mu.RUnlock()
 	if err != nil {
-		for _, h := range rh.handlers {
-			h.ServeHTTP(w, r)
+		for _, v := range rh.handlers {
+			h = v
+			break
 		}
-	} else if h, ok := rh.handlers[gcid]; ok {
+	} else if v, ok := rh.handlers[gcid]; ok {
+		h = v
+	}
+	rh.mu.RUnlock()
+	if h != nil {
 		h.ServeHTTP(w, r)
 	}
 }

@@ -211,7 +211,8 @@ int main(int argc, const char*argv[]) {
 	}
 	// must stop pending recovery
 	g_joinC.close();
-	RAFT_DeleteRaftServer(svr);
+	RAFT_DeleteRaftServer(svrs[1]);
+	RAFT_DeleteRaftServer(svrs[2]);
 	return 0;
 }
 

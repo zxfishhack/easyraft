@@ -485,6 +485,7 @@ func (rc *raftNode) serveChannels() {
 }
 
 func (rc *raftNode) serveRaft() {
+	defer close(rc.httpdonec)
 	var svr *raftHttpHandler
 	defer plog.Notice("serveRaft exit")
 	peer := rc.cfg.getPeerByID(rc.cfg.ID)
@@ -499,14 +500,18 @@ func (rc *raftNode) serveRaft() {
 		plog.Fatalf("Failed Get Raft Http Handler %v", err)
 	}
 	defer func() {
+		plog.Debug("before ReleaseRaftHttpHandler")
 		ReleaseRaftHttpHandler(url)
+		plog.Debug("ReleaseRaftHttpHandler done")
 	}()
 	h := rc.transport.Handler()
 	if err := svr.AddHandler(rc.cfg.ClusterID, h); err != nil {
 		plog.Fatalf("Add Handler failed.")
 	}
 	defer func() {
+		plog.Debug("before RemoveHandler")
 		svr.RemoveHandler(rc.cfg.ClusterID)
+		plog.Debug("RemoveHnalder done")
 	}()
 	stopFlag := false
 	for !stopFlag {
@@ -516,7 +521,6 @@ func (rc *raftNode) serveRaft() {
 		default:
 		}
 	}
-	close(rc.httpdonec)
 }
 
 func (rc *raftNode) Process(ctx context.Context, m raftpb.Message) error {

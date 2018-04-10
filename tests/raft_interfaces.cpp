@@ -7,6 +7,7 @@
 #include <cstring>
 #include "chan.h"
 #include <easyraft.h>
+#include <unistd.h>
 
 extern kv g_kv;
 extern proposeWaiter g_pw;
@@ -67,6 +68,10 @@ int recoverFromSnapshot(void* ctx, void* data, uint64_t size) {
 int onCommit(void* ctx, void* data, uint64_t size) {
 	printf("%s %p\n", __FUNCTION__, ctx);
 	auto pr = static_cast<propose*>(data);
+	if (ctx == (void*)1)
+	{
+		usleep(5*1000*1000);
+	}
 	std::string line;
 	line.assign(pr->cmd, size - propose::header_length());
 	if (pr->id == self) {
