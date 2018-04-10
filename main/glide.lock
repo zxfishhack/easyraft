@@ -1,0 +1,105 @@
+hash: 40a02e93d15df5236d9a3752274444545ef6c78747554d39c75756f1eb4018cb
+updated: 2018-04-11T01:04:05.127510035+08:00
+imports:
+- name: github.com/beorn7/perks
+  version: 3a771d992973f24aa725d07868b467d1ddfceafb
+  subpackages:
+  - quantile
+- name: github.com/coreos/etcd
+  version: 2575f8be0fb6f668001a645abfc675edea09d083
+  repo: https://github.com/zxfishhack/etcd
+  subpackages:
+  - etcdserver/stats
+  - pkg/crc
+  - pkg/fileutil
+  - pkg/httputil
+  - pkg/ioutil
+  - pkg/logutil
+  - pkg/pbutil
+  - pkg/tlsutil
+  - pkg/transport
+  - pkg/types
+  - raft
+  - raft/raftpb
+  - rafthttp
+  - raftsnap
+  - raftsnap/snappb
+  - version
+  - wal
+  - wal/walpb
+- name: github.com/coreos/go-semver
+  version: e214231b295a8ea9479f11b70b35d5acf3556d9b
+  subpackages:
+  - semver
+- name: github.com/coreos/go-systemd
+  version: d1b7d058aa2adfc795ad17ff4aaa2bc64ec11c78
+  subpackages:
+  - journal
+- name: github.com/coreos/pkg
+  version: 97fdf19511ea361ae1c100dd393cc47f8dcfa1e1
+  subpackages:
+  - capnslog
+- name: github.com/gogo/protobuf
+  version: 1ef32a8b9fc3f8ec940126907cedb5998f6318e4
+  subpackages:
+  - gogoproto
+  - proto
+  - protoc-gen-gogo/descriptor
+- name: github.com/golang/protobuf
+  version: e09c5db296004fbe3f74490e84dcd62c3c5ddb1b
+  subpackages:
+  - proto
+- name: github.com/matttproud/golang_protobuf_extensions
+  version: c12348ce28de40eed0136aa2b644d0ee0650e56c
+  subpackages:
+  - pbutil
+- name: github.com/prometheus/client_golang
+  version: e11c6ff8170beca9d5fd8b938e71165eeec53ac6
+  subpackages:
+  - prometheus
+- name: github.com/prometheus/client_model
+  version: 99fa1f4be8e564e8a6b613da7fa6f46c9edafc6c
+  subpackages:
+  - go
+- name: github.com/prometheus/common
+  version: 38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a
+  subpackages:
+  - expfmt
+  - internal/bitbucket.org/ww/goautoneg
+  - model
+- name: github.com/prometheus/procfs
+  version: 8b1c2da0d56deffdbb9e48d4414b4e674bd8083e
+  subpackages:
+  - internal/util
+  - nfs
+  - xfs
+- name: github.com/zxfishhack/probing
+  version: 0b7f0d1bdb9602402d0b28225b0bbff11214af1d
+- name: go.uber.org/atomic
+  version: 8474b86a5a6f79c443ce4b2992817ff32cf208b8
+- name: go.uber.org/multierr
+  version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
+- name: go.uber.org/zap
+  version: f85c78b1dd998214c5f2138155b320a4a43fbe36
+  subpackages:
+  - buffer
+  - internal/bufferpool
+  - internal/color
+  - internal/exit
+  - zapcore
+- name: golang.org/x/net
+  version: 61147c48b25b599e5b561d2e9c4f3e1ef489ca41
+  repo: https://github.com/golang/net.git
+  subpackages:
+  - context
+- name: golang.org/x/time
+  version: 26559e0f760e39c24d730d3224364aef164ee23f
+  repo: https://github.com/golang/time.git
+  subpackages:
+  - rate
+- name: google.golang.org/grpc
+  version: 7f73c863c0d52a3900bdd76ccaf08191ed51b714
+  repo: https://github.com/grpc/grpc-go.git
+  subpackages:
+  - grpclog
+testImports: []

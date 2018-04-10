@@ -52,6 +52,7 @@ func (rh *raftHttpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var h http.Handler
 	rh.mu.RLock()
 	if err != nil {
+		plog.Debug(r.URL)
 		for _, v := range rh.handlers {
 			h = v
 			break

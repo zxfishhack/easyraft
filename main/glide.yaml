@@ -1,0 +1,29 @@
+package: .
+import:
+- package: github.com/coreos/etcd
+  repo: https://github.com/zxfishhack/etcd
+  subpackages:
+  - etcdserver/stats
+  - pkg/fileutil
+  - pkg/types
+  - raft
+  - raft/raftpb
+  - rafthttp
+  - raftsnap
+  - wal
+  - wal/walpb
+- package: github.com/coreos/pkg
+  subpackages:
+  - capnslog
+- package: golang.org/x/time
+  repo: https://github.com/golang/time.git
+  subpackages:
+  - rate
+- package: google.golang.org/grpc
+  repo: https://github.com/grpc/grpc-go.git
+  subpackages:
+  - grpclog
+- package: golang.org/x/net
+  repo: https://github.com/golang/net.git
+  subpackages:
+  - context

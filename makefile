@@ -16,16 +16,25 @@ all: easyraft tests
 
 .PHONY: easyraft
 .PHONY: tests
+.PHONY: deps
 
 .cpp.o:
 	mkdir -p objs/tests
 	@echo \# Compiling $<
 	$(CXX) -c $(CXXFLAGS) $(DEFINE) $(INCLUDE) -oobjs/$@ $<
 
+deps:
+	@echo \# getting dependencies...
+	cd main && glide install
+
 easyraft:
 	mkdir -p libs objs bin
+	@echo \# setting vendor
+	@rm -rf vendor ||  echo ''
+	@mkdir vendor
+	@ln -s "$(PWD)/main/vendor" "vendor/src"
 	@echo \# building $(EASYRAFT_LIB)
-	go build -buildmode=c-archive -gccgoflags '-I$(PWD)/src' -o objs/libeasyraft.a ./main
+	GOPATH=$$GOPATH:$(PWD)/vendor go build -buildmode=c-archive -gccgoflags '-I$(PWD)/src' -o objs/libeasyraft.a ./main
 	gcc src/easyraft.c objs/libeasyraft.a -Isrc -Iobjs -Iinclude -o libs/$(EASYRAFT_LIB) -shared -fPIC
 
 tests: $(OBJS) 
