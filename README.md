@@ -107,14 +107,14 @@ snapshot_entries
 ### On Windows
 1. download tdm64-gcc-5.1.0-2.exe from http://tdm-gcc.tdragon.net/download
 1. install & add tdm-gcc-64/bin to Windows PATH
-1. go get github.com/coreos/etcd
+1. go get
 1. run 'build.bat' build easyraft.dll
 1. open tests\tests.sln with Visual Studio 2015
 1. run bin\test.exe 1, bin\test.exe 2, bin\tests.exe 3
 1. type help in console get command list
 
 ### On Linux
-1. go get github.com/coreos/etcd
+1. go get
 1. run 'make makefile' build libeasyraft.so & tests
 1. run ./bin/tests 1,./bin/tests 2, ./bin/tests 3
 1. type help in console get command list

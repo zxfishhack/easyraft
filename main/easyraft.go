@@ -48,13 +48,13 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/coreos/etcd/pkg/fileutil"
+	"github.com/zxfishhack/etcd/pkg/fileutil"
 
-	"github.com/coreos/etcd/raft"
-	snap "github.com/coreos/etcd/raftsnap"
+	"github.com/zxfishhack/etcd/raft"
+	snap "github.com/zxfishhack/etcd/raftsnap"
 
-	"github.com/coreos/etcd/raft/raftpb"
-	"github.com/coreos/pkg/capnslog"
+	"github.com/zxfishhack/etcd/raft/raftpb"
+	"github.com/zxfishhack/pkg/capnslog"
 )
 
 type PeerStatus struct {
