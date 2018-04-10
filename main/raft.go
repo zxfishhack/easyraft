@@ -35,16 +35,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/zxfishhack/etcd/etcdserver/stats"
-	"github.com/zxfishhack/etcd/pkg/fileutil"
+	"github.com/coreos/etcd/etcdserver/stats"
+	"github.com/coreos/etcd/pkg/fileutil"
 
-	"github.com/zxfishhack/etcd/pkg/types"
-	"github.com/zxfishhack/etcd/raft"
-	"github.com/zxfishhack/etcd/raft/raftpb"
-	"github.com/zxfishhack/etcd/rafthttp"
-	snap "github.com/zxfishhack/etcd/raftsnap"
-	"github.com/zxfishhack/etcd/wal"
-	"github.com/zxfishhack/etcd/wal/walpb"
+	"github.com/coreos/etcd/pkg/types"
+	"github.com/coreos/etcd/raft"
+	"github.com/coreos/etcd/raft/raftpb"
+	"github.com/coreos/etcd/rafthttp"
+	snap "github.com/coreos/etcd/raftsnap"
+	"github.com/coreos/etcd/wal"
+	"github.com/coreos/etcd/wal/walpb"
 )
 
 type raftNodeInternal struct {
