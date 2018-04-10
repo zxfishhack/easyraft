@@ -53,8 +53,8 @@ import (
 	"github.com/zxfishhack/etcd/raft"
 	snap "github.com/zxfishhack/etcd/raftsnap"
 
+	"github.com/coreos/pkg/capnslog"
 	"github.com/zxfishhack/etcd/raft/raftpb"
-	"github.com/zxfishhack/pkg/capnslog"
 )
 
 type PeerStatus struct {
