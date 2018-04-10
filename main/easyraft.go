@@ -38,6 +38,7 @@ package main
 import "C"
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -46,7 +47,6 @@ import (
 	"sync/atomic"
 	"time"
 	"unsafe"
-	"context"
 
 	"github.com/coreos/etcd/pkg/fileutil"
 
@@ -208,7 +208,7 @@ func ptr(i uint64) unsafe.Pointer {
 
 //export GetVersion
 func GetVersion(ver *C.char, n C.size_t) {
-	version := C.CString("v1.0")
+	version := C.CString("v2.0")
 	defer C.free(unsafe.Pointer(version))
 	C.strncpy(ver, version, n)
 }
@@ -304,12 +304,12 @@ func Snapshot(p unsafe.Pointer) C.int {
 		r.inter.snapshotC <- ctx
 	}
 	select {
-	case <- ctx.Done():
+	case <-ctx.Done():
 		if ctx.Err() != nil {
 			plog.Error("snapshot error", ctx.Err())
 			return 1
 		}
-	case err := <- done:
+	case err := <-done:
 		if err != nil {
 			plog.Error("snapshot error", err)
 			return 1
