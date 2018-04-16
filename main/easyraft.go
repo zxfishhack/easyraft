@@ -85,7 +85,7 @@ var (
 )
 
 var holder = map[unsafe.Pointer]*raftServer{}
-var counter = uint64(0)
+var counter = uint64(1)
 
 func getSnapshot(r *raftServer) (ret []byte, err error) {
 	var data unsafe.Pointer
