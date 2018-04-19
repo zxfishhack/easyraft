@@ -80,7 +80,7 @@ func newRaftHttpHandler(url *url.URL) (rh *raftHttpHandler, err error) {
 		return nil, err
 	}
 	rh.mux = http.NewServeMux()
-	rh.mux.Handle("/raft", rh)
+	rh.mux.Handle("/", rh)
 	rh.mux.Handle("/snapshots/", http.StripPrefix("/snapshots/", http.FileServer(http.Dir("./snapshots"))))
 	rh.svr = &http.Server{
 		Handler: rh.mux,
