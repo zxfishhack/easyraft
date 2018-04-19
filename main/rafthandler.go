@@ -81,11 +81,11 @@ func newRaftHttpHandler(url *url.URL) (rh *raftHttpHandler, err error) {
 	}
 	rh.mux = http.NewServeMux()
 	rh.mux.Handle("/raft", rh)
-	rh.mux.Handle("/snapshots", http.StripPrefix("/snapshots", http.FileServer(http.Dir("./snapshots"))))
+	rh.mux.Handle("/snapshots/", http.StripPrefix("/snapshots/", http.FileServer(http.Dir("./snapshots"))))
 	rh.svr = &http.Server{
 		Handler: rh.mux,
 	}
-	
+
 	go func() {
 		rh.svr.Serve(rh.ln)
 		select {

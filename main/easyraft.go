@@ -292,6 +292,7 @@ func Propose(p unsafe.Pointer, data unsafe.Pointer, size C.int) C.int {
 		r.inter.proposeC <- C.GoBytes(data, size)
 		return 0
 	}
+	plog.Error("Propose to unknown RAFT state.")
 	return 1
 }
 
