@@ -10,6 +10,7 @@ import (
 
 type raftHttpHandler struct {
 	svr      *http.Server
+	mux      *http.ServeMux
 	mu       sync.RWMutex
 	handlers map[uint64]http.Handler
 	ln       *stoppableListener
@@ -78,9 +79,13 @@ func newRaftHttpHandler(url *url.URL) (rh *raftHttpHandler, err error) {
 	if err != nil {
 		return nil, err
 	}
+	rh.mux = http.NewServeMux()
+	rh.mux.Handle("/raft", rh)
+	rh.mux.Handle("/snapshots", http.StripPrefix("/snapshots", http.FileServer(http.Dir("./snapshots"))))
 	rh.svr = &http.Server{
-		Handler: rh,
+		Handler: rh.mux,
 	}
+	
 	go func() {
 		rh.svr.Serve(rh.ln)
 		select {
