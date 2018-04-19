@@ -29,12 +29,12 @@ package main
 
 import (
 	"context"
+	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"sync"
 	"time"
-	"net/http"
 
 	"github.com/coreos/etcd/etcdserver/stats"
 	"github.com/coreos/etcd/pkg/fileutil"
@@ -536,12 +536,8 @@ func (rc *raftNode) Process(ctx context.Context, m raftpb.Message) error {
 	return rc.node.Step(ctx, m)
 }
 func (rc *raftNode) IsIDRemoved(id uint64) bool                           { return false }
-func (rc *raftNode) ReportUnreachable(id uint64)                          {
-	rc.node.ReportUnreachable(id)
-}
-func (rc *raftNode) ReportSnapshot(id uint64, status raft.SnapshotStatus) {
-	rc.node.ReportSnapshot(id, status) 
-}
+func (rc *raftNode) ReportUnreachable(id uint64)                          {}
+func (rc *raftNode) ReportSnapshot(id uint64, status raft.SnapshotStatus) {}
 
 func (rc *raftNode) getPeersStatus() []PeerStatus {
 	if rc.transport == nil {

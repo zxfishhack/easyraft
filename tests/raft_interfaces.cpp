@@ -70,7 +70,7 @@ int onCommit(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index
 	auto pr = static_cast<propose*>(data);
 	if (ctx == (void*)1)
 	{
-		usleep(5*1000*1000);
+		//usleep(5*1000*1000);
 	}
 	std::string line;
 	line.assign(pr->cmd, size - propose::header_length());
@@ -96,5 +96,12 @@ int onCommit(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index
 	if (pr->id == self) {
 		g_pw.signal(pr->seq);
 	}
+	return 0;
+}
+
+int onMessage(void* ctx, void* data, uint64_t size, void**outdata, uint64_t* outsize) {
+	*outdata = malloc(size);
+	*outsize = size;
+	memcpy(*outdata, data, size);
 	return 0;
 }

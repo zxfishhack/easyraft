@@ -39,11 +39,12 @@ int main(int argc, const char*argv[]) {
 	}
 	char ver[256];
 	RAFT_Callback cb;
-	cb.freeSnapshot = freeSnapshot;
+	cb.free = freeSnapshot;
 	cb.getSnapshot = getSnapshot;
 	cb.onCommit = onCommit;
 	cb.onStateChange = onStateChange;
 	cb.recoverFromSnapshot = recoverFromSnapshot;
+	cb.onMessage = onMessage;
 
 	RAFT_GetVersion(ver, 256);
 	std::cout << ver << std::endl;
@@ -103,6 +104,9 @@ int main(int argc, const char*argv[]) {
 		if (RAFT_GetPeersStatus(svrs[2], ver, 256) == 0) {
 			printf("2: peers status %s\n", ver);
 		}
+		char buf[256] = {0};
+		RAFT_SendMessage(svrs[1], 2, "123", 3, buf, 256); 
+		printf("sendmessage return: %s\n", buf);
 		std::getline(std::cin, pro);
 		pro = pro.substr(0, pro.find_last_of('\n'));
 		splitCmd(pro, cmd, cid, arg);
