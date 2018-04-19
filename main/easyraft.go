@@ -38,6 +38,7 @@ package main
 import "C"
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -45,8 +46,11 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
+	"net/http"
 	"time"
+	"io/ioutil"
 	"unsafe"
+	"strconv"
 
 	"github.com/coreos/etcd/pkg/fileutil"
 
@@ -95,9 +99,22 @@ func getSnapshot(r *raftServer) (ret []byte, err error) {
 		err = fmt.Errorf("get snapshot failed[%d]", int(res))
 	} else {
 		ret = C.GoBytes(data, C.int(size))
-		C.FreeSnapshotInternal(r.ctx, data)
+		C.FreeInternal(r.ctx, data)
 	}
 	return ret, err
+}
+
+func processMessage(r *raftServer, w http.ResponseWriter, req *http.Request) {
+	var data unsafe.Pointer
+	var size C.uint64_t
+	d, _ := ioutil.ReadAll(req.Body)
+	res := C.OnMessageInternal(r.ctx, unsafe.Pointer(&d[0]), C.uint64_t(len(d)), &data, &size)
+	if res != 0 {
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		w.Write(C.GoBytes(data, C.int(size)))
+		C.FreeInternal(r.ctx, data)
+	}
 }
 
 func (r *raftServer) goAttach(f func()) {
@@ -192,6 +209,10 @@ func (r *raftServer) purgeFile() {
 	case <-r.stopc:
 		return
 	}
+}
+
+func (r *raftServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	processMessage(r, w, req)
 }
 
 func (r *raftServer) onRaftStarted() {
@@ -365,6 +386,47 @@ func GetPeersStatus(p unsafe.Pointer, buf *C.char, size C.size_t) C.int {
 		return 0
 	}
 	return 1
+}
+
+//export SendMessage
+func SendMessage(p unsafe.Pointer, ID uint64, buf *C.char, size C.size_t, outbuf *C.char, outsize C.size_t) int {
+	r := holder[p]
+	if r != nil{
+		if ID == r.cfg.ID {
+			return -2
+		}
+		var url *string
+		for _, p := range r.cfg.Peers {
+			if p.ID == ID {
+				url = &p.URL
+				break
+			}
+		}
+		if url == nil {
+			return -3
+		}
+		body := bytes.NewBuffer(C.GoBytes(unsafe.Pointer(buf), C.int(size)))
+		req, err := http.NewRequest("POST", (*url) + "/message", body)
+		if err != nil {
+			return -4
+		}
+		req.Header.Set("X-Etcd-Cluster-ID", strconv.FormatUint(r.cfg.ClusterID, 10))
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			return -5
+		}
+		respBody, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return -6
+		}
+		if int(outsize) < len(respBody) {
+			return -1
+		}
+		C.memcpy(unsafe.Pointer(outbuf), unsafe.Pointer(&respBody[0]), C.size_t(len(respBody)))
+		return len(respBody)
+	}
+	return -2
 }
 
 func main() {}

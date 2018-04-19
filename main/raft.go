@@ -34,6 +34,7 @@ import (
 	"strconv"
 	"sync"
 	"time"
+	"net/http"
 
 	"github.com/coreos/etcd/etcdserver/stats"
 	"github.com/coreos/etcd/pkg/fileutil"
@@ -510,7 +511,10 @@ func (rc *raftNode) serveRaft() {
 		plog.Debug("ReleaseRaftHttpHandler done")
 	}()
 	h := rc.transport.Handler()
-	if err := svr.AddHandler(rc.cfg.ClusterID, h); err != nil {
+	mux := http.NewServeMux()
+	mux.Handle("/message", rc.inter.ctx)
+	mux.Handle("/", h)
+	if err := svr.AddHandler(rc.cfg.ClusterID, mux); err != nil {
 		plog.Fatalf("Add Handler failed.")
 	}
 	defer func() {
@@ -532,8 +536,12 @@ func (rc *raftNode) Process(ctx context.Context, m raftpb.Message) error {
 	return rc.node.Step(ctx, m)
 }
 func (rc *raftNode) IsIDRemoved(id uint64) bool                           { return false }
-func (rc *raftNode) ReportUnreachable(id uint64)                          {}
-func (rc *raftNode) ReportSnapshot(id uint64, status raft.SnapshotStatus) {}
+func (rc *raftNode) ReportUnreachable(id uint64)                          {
+	rc.node.ReportUnreachable(id)
+}
+func (rc *raftNode) ReportSnapshot(id uint64, status raft.SnapshotStatus) {
+	rc.node.ReportSnapshot(id, status) 
+}
 
 func (rc *raftNode) getPeersStatus() []PeerStatus {
 	if rc.transport == nil {

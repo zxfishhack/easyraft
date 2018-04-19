@@ -5,10 +5,11 @@
 
 struct RAFT_Callback {
     int (*getSnapshot)(void* ctx, void** data, uint64_t* size);
-    void (*freeSnapshot)(void* ctx, void* data);
     void (*onStateChange)(void* ctx, int newState);
     int (*recoverFromSnapshot)(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index);
     int (*onCommit)(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index);
+    int (*onMessage)(void* ctx, void* data, uint64_t size, void**outdata, uint64_t* outsize);
+    void (*free)(void* ctx, void* data);
 };
 
 #ifdef _WIN32
@@ -57,6 +58,7 @@ DLL_EXPORTS int   RAFT_AddServer(void* raft, uint64_t id, const char* url);
 DLL_EXPORTS int   RAFT_DelServer(void* raft, uint64_t id);
 DLL_EXPORTS int   RAFT_ChangeServer(void* raft, uint64_t id, const char* url);
 DLL_EXPORTS int   RAFT_GetPeersStatus(void* raft, char* buf, size_t size);
+DLL_EXPORTS int   RAFT_SendMessage(void *raft, uint64_t id, char* buf, size_t size, char* outbuf, size_t outsize);
 
 #ifdef __cplusplus
 }

@@ -47,3 +47,7 @@ int RAFT_ChangeServer(void* raft, uint64_t id, const char* url) {
 int RAFT_GetPeersStatus(void* raft, char* buf, size_t size) {
     return GetPeersStatus(raft, buf, size);
 }
+
+int RAFT_SendMessage(void *raft, char* buf, size_t size, char* outbuf, size_t outsize) {
+    return SendMessage(raft, buf, size, outbuf, outsize);
+}
