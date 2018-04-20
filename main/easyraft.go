@@ -423,7 +423,9 @@ func SendMessage(p unsafe.Pointer, ID uint64, buf *C.char, size C.size_t, outbuf
 		if int(outsize) < len(respBody) {
 			return -1
 		}
-		C.memcpy(unsafe.Pointer(outbuf), unsafe.Pointer(&respBody[0]), C.size_t(len(respBody)))
+		if len(respBody) > 0 {
+			C.memcpy(unsafe.Pointer(outbuf), unsafe.Pointer(&respBody[0]), C.size_t(len(respBody)))
+		}
 		return len(respBody)
 	}
 	return -2
