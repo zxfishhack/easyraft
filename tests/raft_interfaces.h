@@ -44,3 +44,4 @@ void freeSnapshot(void* ctx, void* data);
 void onStateChange(void* ctx, int newState);
 int recoverFromSnapshot(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index);
 int onCommit(void* ctx, void* data, uint64_t size, uint64_t term, uint64_t index);
+int onMessage(void* ctx, void* data, uint64_t size, void**outdata, uint64_t* outsize);
