@@ -329,7 +329,9 @@ func (rc *raftNode) stop() {
 
 func (rc *raftNode) stopHTTP() {
 	close(rc.httpstopc)
-	rc.transport.Stop()
+	if rc.transport != nil {
+		rc.transport.Stop()
+	}
 	<-rc.httpdonec
 	plog.Notice("http server stopped")
 }
