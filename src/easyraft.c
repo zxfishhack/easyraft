@@ -48,6 +48,10 @@ int RAFT_GetPeersStatus(void* raft, char* buf, size_t size) {
     return GetPeersStatus(raft, buf, size);
 }
 
+int RAFT_GetStatus(void* raft, char* buf, size_t size) {
+    return GetStatus(raft, buf, size);
+}
+
 int RAFT_SendMessage(void *raft, uint64_t id, char* buf, size_t size, char* outbuf, size_t outsize) {
     return SendMessage(raft, id, buf, size, outbuf, outsize);
 }

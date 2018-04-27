@@ -388,6 +388,22 @@ func GetPeersStatus(p unsafe.Pointer, buf *C.char, size C.size_t) C.int {
 	return 1
 }
 
+//export GetStatus
+func GetStatus(p unsafe.Pointer, buf *C.char, size C.size_t) C.int {
+	r := holder[p]
+	if r != nil {
+		status := r.node.node.Status().String()
+		str := C.CString(status)
+		defer C.free(unsafe.Pointer(str))
+		if int(size) < len(status) {
+			return 3
+		}
+		C.strncpy(buf, str, size)
+		return 0
+	}
+	return 1
+}
+
 //export SendMessage
 func SendMessage(p unsafe.Pointer, ID uint64, buf *C.char, size C.size_t, outbuf *C.char, outsize C.size_t) int {
 	r := holder[p]
