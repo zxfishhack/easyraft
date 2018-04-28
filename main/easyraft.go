@@ -88,8 +88,12 @@ var (
 	lastError error
 )
 
-var holder = map[uint64]*raftServer{}
+var holder = map[C.uint64_t]*raftServer{}
 var counter = uint64(1)
+
+func null() unsafe.Pointer {
+	return (unsafe.Pointer)(uintptr(0))
+}
 
 func getSnapshot(r *raftServer) (ret []byte, err error) {
 	var data unsafe.Pointer
@@ -219,18 +223,6 @@ func (r *raftServer) onRaftStarted() {
 	r.goAttach(r.purgeFile)
 }
 
-func null() unsafe.Pointer {
-	return (unsafe.Pointer)(uintptr(0))
-}
-
-func ptr(i uint64) unsafe.Pointer {
-	return (unsafe.Pointer)(uintptr(i))
-}
-
-func fromPtr(p unsafe.Pointer) uint64 {
-	return uint64(uintptr(p))
-}
-
 //export GetVersion
 func GetVersion(ver *C.char, n C.size_t) {
 	version := C.CString("v2.0")
@@ -270,7 +262,7 @@ func SetLogLevel(logLevel C.int) C.int {
 }
 
 //export NewRaftServer
-func NewRaftServer(ctx unsafe.Pointer, jsonConfig *C.char) unsafe.Pointer {
+func NewRaftServer(ctx unsafe.Pointer, jsonConfig *C.char) C.uint64_t {
 	svr := &raftServer{
 		inter: &raftNodeInternal{
 			proposeC:    make(chan []byte),
@@ -286,19 +278,19 @@ func NewRaftServer(ctx unsafe.Pointer, jsonConfig *C.char) unsafe.Pointer {
 	plog.Infof("NewRaftServer with config[%s]\n", C.GoString(jsonConfig))
 	if err := json.Unmarshal([]byte(C.GoString(jsonConfig)), &svr.cfg); err != nil {
 		lastError = err
-		return null()
+		return C.uint64_t(0)
 	}
 	svr.node, svr.snap = newRaftNode(svr.cfg, svr.inter)
 	svr.goAttach(svr.readCommits)
-	cnt := atomic.AddUint64(&counter, 1)
+	cnt := C.uint64_t(atomic.AddUint64(&counter, 1))
 	holder[cnt] = svr
 	svr.inter.initDone.Wait()
-	return ptr(cnt)
+	return cnt
 }
 
 //export DeleteRaftServer
-func DeleteRaftServer(p unsafe.Pointer) {
-	r := holder[fromPtr(p)]
+func DeleteRaftServer(p C.uint64_t) {
+	r := holder[p]
 	if r != nil {
 		plog.Debugf("before real stop, attach:%d done:%d", r.attachCount, r.doneCount)
 		close(r.inter.proposeC)
@@ -306,14 +298,14 @@ func DeleteRaftServer(p unsafe.Pointer) {
 		r.node.stop()
 		close(r.stopc)
 		r.wg.Wait()
-		delete(holder, fromPtr(p))
+		delete(holder, p)
 		runtime.GC()
 	}
 }
 
 //export Propose
-func Propose(p unsafe.Pointer, data unsafe.Pointer, size C.int) C.int {
-	r := holder[fromPtr(p)]
+func Propose(p C.uint64_t, data unsafe.Pointer, size C.int) C.int {
+	r := holder[p]
 	if r != nil {
 		r.inter.proposeC <- C.GoBytes(data, size)
 		return 0
@@ -323,8 +315,8 @@ func Propose(p unsafe.Pointer, data unsafe.Pointer, size C.int) C.int {
 }
 
 //export Snapshot
-func Snapshot(p unsafe.Pointer) C.int {
-	r := holder[fromPtr(p)]
+func Snapshot(p C.uint64_t) C.int {
+	r := holder[p]
 	done := make(chan error)
 	ctx := context.WithValue(context.TODO(), "done", done)
 	if r != nil {
@@ -345,8 +337,8 @@ func Snapshot(p unsafe.Pointer) C.int {
 	return 0
 }
 
-func updateServer(updateType raftpb.ConfChangeType, p unsafe.Pointer, ID uint64, url *C.char) C.int {
-	r := holder[fromPtr(p)]
+func updateServer(updateType raftpb.ConfChangeType, p C.uint64_t, ID uint64, url *C.char) C.int {
+	r := holder[p]
 	if r != nil {
 		r.inter.confChangeC <- raftpb.ConfChange{
 			Type:    updateType,
@@ -359,23 +351,23 @@ func updateServer(updateType raftpb.ConfChangeType, p unsafe.Pointer, ID uint64,
 }
 
 //export AddServer
-func AddServer(p unsafe.Pointer, ID uint64, url *C.char) C.int {
+func AddServer(p C.uint64_t, ID uint64, url *C.char) C.int {
 	return updateServer(raftpb.ConfChangeAddNode, p, ID, url)
 }
 
 //export DelServer
-func DelServer(p unsafe.Pointer, ID uint64, url *C.char) C.int {
+func DelServer(p C.uint64_t, ID uint64, url *C.char) C.int {
 	return updateServer(raftpb.ConfChangeRemoveNode, p, ID, url)
 }
 
 //export ChangeServer
-func ChangeServer(p unsafe.Pointer, ID uint64, url *C.char) C.int {
+func ChangeServer(p C.uint64_t, ID uint64, url *C.char) C.int {
 	return updateServer(raftpb.ConfChangeUpdateNode, p, ID, url)
 }
 
 //export GetPeersStatus
-func GetPeersStatus(p unsafe.Pointer, buf *C.char, size C.size_t) C.int {
-	r := holder[fromPtr(p)]
+func GetPeersStatus(p C.uint64_t, buf *C.char, size C.size_t) C.int {
+	r := holder[p]
 	if r != nil {
 		status := r.node.getPeersStatus()
 		js, err := json.Marshal(status)
@@ -394,8 +386,8 @@ func GetPeersStatus(p unsafe.Pointer, buf *C.char, size C.size_t) C.int {
 }
 
 //export GetStatus
-func GetStatus(p unsafe.Pointer, buf *C.char, size C.size_t) C.int {
-	r := holder[fromPtr(p)]
+func GetStatus(p C.uint64_t, buf *C.char, size C.size_t) C.int {
+	r := holder[p]
 	if r != nil {
 		status := r.node.node.Status().String()
 		str := C.CString(status)
@@ -410,8 +402,8 @@ func GetStatus(p unsafe.Pointer, buf *C.char, size C.size_t) C.int {
 }
 
 //export SendMessage
-func SendMessage(p unsafe.Pointer, ID uint64, buf *C.char, size C.size_t, outbuf *C.char, outsize C.size_t) int {
-	r := holder[fromPtr(p)]
+func SendMessage(p C.uint64_t, ID uint64, buf *C.char, size C.size_t, outbuf *C.char, outsize C.size_t) int {
+	r := holder[p]
 	if r != nil {
 		if ID == r.cfg.ID {
 			return -2

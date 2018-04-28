@@ -16,42 +16,42 @@ void RAFT_GetVersion(char * v, size_t n) {
     GetVersion(v, n);
 }
 
-void* RAFT_NewRaftServer(void* ctx, const char* jsonConfig) {
+uint64_t RAFT_NewRaftServer(void* ctx, const char* jsonConfig) {
     return NewRaftServer(ctx, (char*)jsonConfig);
 }
 
-void RAFT_DeleteRaftServer(void* raft) {
+void RAFT_DeleteRaftServer(uint64_t raft) {
     return DeleteRaftServer(raft);
 }
 
-int RAFT_Propose(void* raft, void* data, int size) {
+int RAFT_Propose(uint64_t raft, void* data, int size) {
     return Propose(raft, data, size);
 }
 
-int RAFT_Snapshot(void* raft) {
+int RAFT_Snapshot(uint64_t raft) {
     return Snapshot(raft);
 }
 
-int RAFT_AddServer(void* raft, uint64_t id, const char* url) {
+int RAFT_AddServer(uint64_t raft, uint64_t id, const char* url) {
     return AddServer(raft, id, (char*)url);
 }
 
-int RAFT_DelServer(void* raft, uint64_t id) {
+int RAFT_DelServer(uint64_t raft, uint64_t id) {
     return DelServer(raft, id, (char*)"");
 }
 
-int RAFT_ChangeServer(void* raft, uint64_t id, const char* url) {
+int RAFT_ChangeServer(uint64_t raft, uint64_t id, const char* url) {
     return ChangeServer(raft, id, (char*)url);
 }
 
-int RAFT_GetPeersStatus(void* raft, char* buf, size_t size) {
+int RAFT_GetPeersStatus(uint64_t raft, char* buf, size_t size) {
     return GetPeersStatus(raft, buf, size);
 }
 
-int RAFT_GetStatus(void* raft, char* buf, size_t size) {
+int RAFT_GetStatus(uint64_t raft, char* buf, size_t size) {
     return GetStatus(raft, buf, size);
 }
 
-int RAFT_SendMessage(void *raft, uint64_t id, char* buf, size_t size, char* outbuf, size_t outsize) {
+int RAFT_SendMessage(uint64_t raft, uint64_t id, char* buf, size_t size, char* outbuf, size_t outsize) {
     return SendMessage(raft, id, buf, size, outbuf, outsize);
 }

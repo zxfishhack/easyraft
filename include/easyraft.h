@@ -50,16 +50,16 @@ DLL_EXPORTS void  RAFT_SetCallback(struct RAFT_Callback* ctx);
 DLL_EXPORTS int   RAFT_SetLogger(const char* logPath, int debug);
 DLL_EXPORTS int   RAFT_SetLogLevel(int logLevel);
 DLL_EXPORTS void  RAFT_GetVersion(char * v, size_t n);
-DLL_EXPORTS void* RAFT_NewRaftServer(void* ctx, const char* jsonConfig);
-DLL_EXPORTS void  RAFT_DeleteRaftServer(void* raft);
-DLL_EXPORTS int   RAFT_Propose(void* raft, void* data, int size);
-DLL_EXPORTS int   RAFT_Snapshot(void* raft);
-DLL_EXPORTS int   RAFT_AddServer(void* raft, uint64_t id, const char* url);
-DLL_EXPORTS int   RAFT_DelServer(void* raft, uint64_t id);
-DLL_EXPORTS int   RAFT_ChangeServer(void* raft, uint64_t id, const char* url);
-DLL_EXPORTS int   RAFT_GetPeersStatus(void* raft, char* buf, size_t size);
-DLL_EXPORTS int   RAFT_GetStatus(void* raft, char* buf, size_t size);
-DLL_EXPORTS int   RAFT_SendMessage(void *raft, uint64_t id, char* buf, size_t size, char* outbuf, size_t outsize);
+DLL_EXPORTS uint64_t RAFT_NewRaftServer(void* ctx, const char* jsonConfig);
+DLL_EXPORTS void  RAFT_DeleteRaftServer(uint64_t raft);
+DLL_EXPORTS int   RAFT_Propose(uint64_t raft, void* data, int size);
+DLL_EXPORTS int   RAFT_Snapshot(uint64_t raft);
+DLL_EXPORTS int   RAFT_AddServer(uint64_t raft, uint64_t id, const char* url);
+DLL_EXPORTS int   RAFT_DelServer(uint64_t raft, uint64_t id);
+DLL_EXPORTS int   RAFT_ChangeServer(uint64_t raft, uint64_t id, const char* url);
+DLL_EXPORTS int   RAFT_GetPeersStatus(uint64_t raft, char* buf, size_t size);
+DLL_EXPORTS int   RAFT_GetStatus(uint64_t raft, char* buf, size_t size);
+DLL_EXPORTS int   RAFT_SendMessage(uint64_t raft, uint64_t id, char* buf, size_t size, char* outbuf, size_t outsize);
 
 #ifdef __cplusplus
 }

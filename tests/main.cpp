@@ -55,7 +55,7 @@ int main(int argc, const char*argv[]) {
 
 	self = atoi(argv[1]) - 1;
 
-	void* svr = NULL, *svr2 = NULL;
+	uint64_t svr = 0, svr2 = 0;
 
 	if (self >= 3) {
 		svr = RAFT_NewRaftServer(0, joinConfig[self - 3]);
@@ -95,7 +95,7 @@ int main(int argc, const char*argv[]) {
 		return ret;
 	};
 
-	void* svrs[3] = {0, svr, svr2};
+	uint64_t svrs[3] = {0, svr, svr2};
 
 	while(true) {
 		if (RAFT_GetPeersStatus(svrs[1], ver, 256) == 0) {
