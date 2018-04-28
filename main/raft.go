@@ -56,6 +56,7 @@ type raftNodeInternal struct {
 	errorC      chan error
 	stateC      chan raft.StateType
 	ctx         *raftServer
+	initDone    sync.WaitGroup
 }
 
 type raftNode struct {
@@ -96,6 +97,7 @@ func newRaftNode(cfg config, r *raftNodeInternal) (*raftNode, *snap.Snapshotter)
 	}
 	rc.inter.commitC = make(chan *raftpb.Entry)
 	rc.inter.errorC = make(chan error)
+	rc.inter.initDone.Add(1)
 
 	rc.inter.ctx.goAttach(rc.startRaft)
 	return rc, <-rc.snapshotterReady
@@ -298,6 +300,7 @@ func (rc *raftNode) startRaft() {
 		plog.Debugf("start node peers:%v", startPeers)
 		rc.node = raft.StartNode(c, startPeers)
 	}
+	rc.inter.initDone.Done()
 	rc.transport = &rafthttp.Transport{
 		ID:          types.ID(rc.cfg.ID),
 		ClusterID:   types.ID(rc.cfg.ClusterID),

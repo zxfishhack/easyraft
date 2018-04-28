@@ -288,6 +288,7 @@ func NewRaftServer(ctx unsafe.Pointer, jsonConfig *C.char) unsafe.Pointer {
 	svr.goAttach(svr.readCommits)
 	cnt := ptr(atomic.AddUint64(&counter, 1))
 	holder[cnt] = svr
+	svr.inter.initDone.Wait()
 	return cnt
 }
 
