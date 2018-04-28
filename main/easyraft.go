@@ -42,15 +42,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"sync"
 	"sync/atomic"
-	"net/http"
 	"time"
-	"io/ioutil"
 	"unsafe"
-	"strconv"
 
 	"github.com/coreos/etcd/pkg/fileutil"
 
@@ -88,7 +88,7 @@ var (
 	lastError error
 )
 
-var holder = map[unsafe.Pointer]*raftServer{}
+var holder = map[uint64]*raftServer{}
 var counter = uint64(1)
 
 func getSnapshot(r *raftServer) (ret []byte, err error) {
@@ -227,6 +227,10 @@ func ptr(i uint64) unsafe.Pointer {
 	return (unsafe.Pointer)(uintptr(i))
 }
 
+func fromPtr(p unsafe.Pointer) uint64 {
+	return uint64(uintptr(p))
+}
+
 //export GetVersion
 func GetVersion(ver *C.char, n C.size_t) {
 	version := C.CString("v2.0")
@@ -286,15 +290,15 @@ func NewRaftServer(ctx unsafe.Pointer, jsonConfig *C.char) unsafe.Pointer {
 	}
 	svr.node, svr.snap = newRaftNode(svr.cfg, svr.inter)
 	svr.goAttach(svr.readCommits)
-	cnt := ptr(atomic.AddUint64(&counter, 1))
+	cnt := atomic.AddUint64(&counter, 1)
 	holder[cnt] = svr
 	svr.inter.initDone.Wait()
-	return cnt
+	return ptr(cnt)
 }
 
 //export DeleteRaftServer
 func DeleteRaftServer(p unsafe.Pointer) {
-	r := holder[p]
+	r := holder[fromPtr(p)]
 	if r != nil {
 		plog.Debugf("before real stop, attach:%d done:%d", r.attachCount, r.doneCount)
 		close(r.inter.proposeC)
@@ -302,14 +306,14 @@ func DeleteRaftServer(p unsafe.Pointer) {
 		r.node.stop()
 		close(r.stopc)
 		r.wg.Wait()
-		delete(holder, p)
+		delete(holder, fromPtr(p))
 		runtime.GC()
 	}
 }
 
 //export Propose
 func Propose(p unsafe.Pointer, data unsafe.Pointer, size C.int) C.int {
-	r := holder[p]
+	r := holder[fromPtr(p)]
 	if r != nil {
 		r.inter.proposeC <- C.GoBytes(data, size)
 		return 0
@@ -320,7 +324,7 @@ func Propose(p unsafe.Pointer, data unsafe.Pointer, size C.int) C.int {
 
 //export Snapshot
 func Snapshot(p unsafe.Pointer) C.int {
-	r := holder[p]
+	r := holder[fromPtr(p)]
 	done := make(chan error)
 	ctx := context.WithValue(context.TODO(), "done", done)
 	if r != nil {
@@ -342,7 +346,7 @@ func Snapshot(p unsafe.Pointer) C.int {
 }
 
 func updateServer(updateType raftpb.ConfChangeType, p unsafe.Pointer, ID uint64, url *C.char) C.int {
-	r := holder[p]
+	r := holder[fromPtr(p)]
 	if r != nil {
 		r.inter.confChangeC <- raftpb.ConfChange{
 			Type:    updateType,
@@ -371,7 +375,7 @@ func ChangeServer(p unsafe.Pointer, ID uint64, url *C.char) C.int {
 
 //export GetPeersStatus
 func GetPeersStatus(p unsafe.Pointer, buf *C.char, size C.size_t) C.int {
-	r := holder[p]
+	r := holder[fromPtr(p)]
 	if r != nil {
 		status := r.node.getPeersStatus()
 		js, err := json.Marshal(status)
@@ -391,7 +395,7 @@ func GetPeersStatus(p unsafe.Pointer, buf *C.char, size C.size_t) C.int {
 
 //export GetStatus
 func GetStatus(p unsafe.Pointer, buf *C.char, size C.size_t) C.int {
-	r := holder[p]
+	r := holder[fromPtr(p)]
 	if r != nil {
 		status := r.node.node.Status().String()
 		str := C.CString(status)
@@ -407,8 +411,8 @@ func GetStatus(p unsafe.Pointer, buf *C.char, size C.size_t) C.int {
 
 //export SendMessage
 func SendMessage(p unsafe.Pointer, ID uint64, buf *C.char, size C.size_t, outbuf *C.char, outsize C.size_t) int {
-	r := holder[p]
-	if r != nil{
+	r := holder[fromPtr(p)]
+	if r != nil {
 		if ID == r.cfg.ID {
 			return -2
 		}
@@ -423,7 +427,7 @@ func SendMessage(p unsafe.Pointer, ID uint64, buf *C.char, size C.size_t, outbuf
 			return -3
 		}
 		body := bytes.NewBuffer(C.GoBytes(unsafe.Pointer(buf), C.int(size)))
-		req, err := http.NewRequest("POST", (*url) + "/message", body)
+		req, err := http.NewRequest("POST", (*url)+"/message", body)
 		if err != nil {
 			return -4
 		}
