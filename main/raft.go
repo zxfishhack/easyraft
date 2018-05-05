@@ -483,7 +483,12 @@ func (rc *raftNode) serveChannels() {
 			rc.maybeTriggerSnapshot(false, nil)
 			rc.node.Advance()
 			if rd.SoftState != nil {
-				rc.inter.stateC <- rd.RaftState
+				select {
+				case rc.inter.stateC <- rd.RaftState:
+				// has stopped
+				case <-rc.stopc:
+					return
+				}
 			}
 		case err := <-rc.transport.ErrorC:
 			rc.writeError(err)
