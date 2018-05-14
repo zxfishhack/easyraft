@@ -304,11 +304,18 @@ func DeleteRaftServer(p C.uint64_t) {
 }
 
 //export Propose
-func Propose(p C.uint64_t, data unsafe.Pointer, size C.int) C.int {
+func Propose(p C.uint64_t, data unsafe.Pointer, size C.int, timeoutms C.int) C.int {
 	r := holder[p]
 	if r != nil {
-		r.inter.proposeC <- C.GoBytes(data, size)
+		select {
+		case r.inter.proposeC <- C.GoBytes(data, size):
+		case <-time.After(time.Duration(int(timeoutms)) * time.Millisecond):
+			//TODO:exit?
+			plog.Errorf("Propose timeout")
+			return 2
+		}
 		return 0
+
 	}
 	plog.Error("Propose to unknown RAFT state.")
 	return 1

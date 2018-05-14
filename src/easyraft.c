@@ -24,8 +24,8 @@ void RAFT_DeleteRaftServer(uint64_t raft) {
     return DeleteRaftServer(raft);
 }
 
-int RAFT_Propose(uint64_t raft, void* data, int size) {
-    return Propose(raft, data, size);
+int RAFT_Propose(uint64_t raft, void* data, int size, int timeoutms) {
+    return Propose(raft, data, size, timeoutms);
 }
 
 int RAFT_Snapshot(uint64_t raft) {
@@ -52,6 +52,6 @@ int RAFT_GetStatus(uint64_t raft, char* buf, size_t size) {
     return GetStatus(raft, buf, size);
 }
 
-int RAFT_SendMessage(uint64_t raft, uint64_t id, char* buf, size_t size, char* outbuf, size_t outsize) {
-    return SendMessage(raft, id, buf, size, outbuf, outsize);
+int RAFT_SendMessage(uint64_t raft, uint64_t id, const char* buf, size_t size, char* outbuf, size_t outsize) {
+    return SendMessage(raft, id, (char*)buf, size, outbuf, outsize);
 }

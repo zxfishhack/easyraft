@@ -82,7 +82,7 @@ int main(int argc, const char*argv[]) {
 		pr.cid = cid;
 		pr.seq = g_pw.getSeq();
 		memcpy(pr.cmd, pro.c_str(), pro.length());
-		if (RAFT_Propose(svr, mem, (int)size) != 0) {
+		if (RAFT_Propose(svr, mem, (int)size, 3000) != 0) {
 			std::cout << cmd << " failed." << std::endl;
 		}
 		else {
