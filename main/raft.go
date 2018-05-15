@@ -537,7 +537,6 @@ func (rc *raftNode) serveRaft() {
 		select {
 		case <-rc.httpstopc:
 			stopFlag = true
-		default:
 		}
 	}
 }
