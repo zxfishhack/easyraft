@@ -1,12 +1,12 @@
-hash: 40a02e93d15df5236d9a3752274444545ef6c78747554d39c75756f1eb4018cb
-updated: 2018-04-11T01:04:05.127510035+08:00
+hash: b779be36aad4dd3c823e01861fe6c3655f4b623da78102f36e5c5d1b741434b8
+updated: 2018-05-15T23:52:14.900748561+08:00
 imports:
 - name: github.com/beorn7/perks
   version: 3a771d992973f24aa725d07868b467d1ddfceafb
   subpackages:
   - quantile
 - name: github.com/coreos/etcd
-  version: 2575f8be0fb6f668001a645abfc675edea09d083
+  version: 25f4de34ec4c35889fdf1c8d9192663761e6a2b9
   repo: https://github.com/zxfishhack/etcd
   subpackages:
   - etcdserver/stats
@@ -32,7 +32,7 @@ imports:
   subpackages:
   - semver
 - name: github.com/coreos/go-systemd
-  version: d1b7d058aa2adfc795ad17ff4aaa2bc64ec11c78
+  version: 39ca1b05acc7ad1220e09f133283b8859a8b71ab
   subpackages:
   - journal
 - name: github.com/coreos/pkg
@@ -40,13 +40,13 @@ imports:
   subpackages:
   - capnslog
 - name: github.com/gogo/protobuf
-  version: 1ef32a8b9fc3f8ec940126907cedb5998f6318e4
+  version: 30cf7ac33676b5786e78c746683f0d4cd64fa75b
   subpackages:
   - gogoproto
   - proto
   - protoc-gen-gogo/descriptor
 - name: github.com/golang/protobuf
-  version: e09c5db296004fbe3f74490e84dcd62c3c5ddb1b
+  version: 927b65914520a8b7d44f5c9057611cfec6b2e2d0
   subpackages:
   - proto
 - name: github.com/matttproud/golang_protobuf_extensions
@@ -54,7 +54,7 @@ imports:
   subpackages:
   - pbutil
 - name: github.com/prometheus/client_golang
-  version: e11c6ff8170beca9d5fd8b938e71165eeec53ac6
+  version: 82f5ff156b29e276022b1a958f7d385870fb9814
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
@@ -62,7 +62,7 @@ imports:
   subpackages:
   - go
 - name: github.com/prometheus/common
-  version: 38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a
+  version: d811d2e9bf898806ecfb6ef6296774b13ffc314c
   subpackages:
   - expfmt
   - internal/bitbucket.org/ww/goautoneg
@@ -76,11 +76,11 @@ imports:
 - name: github.com/zxfishhack/probing
   version: 0b7f0d1bdb9602402d0b28225b0bbff11214af1d
 - name: go.uber.org/atomic
-  version: 8474b86a5a6f79c443ce4b2992817ff32cf208b8
+  version: 1ea20fb1cbb1cc08cbd0d913a96dead89aa18289
 - name: go.uber.org/multierr
   version: 3c4937480c32f4c13a875a1829af76c98ca3d40a
 - name: go.uber.org/zap
-  version: f85c78b1dd998214c5f2138155b320a4a43fbe36
+  version: 2dc8d10634f473f4dc678e48391a9dc8cf6ae6f9
   subpackages:
   - buffer
   - internal/bufferpool
@@ -88,17 +88,17 @@ imports:
   - internal/exit
   - zapcore
 - name: golang.org/x/net
-  version: 61147c48b25b599e5b561d2e9c4f3e1ef489ca41
+  version: 2491c5de3490fced2f6cff376127c667efeed857
   repo: https://github.com/golang/net.git
   subpackages:
   - context
 - name: golang.org/x/time
-  version: 26559e0f760e39c24d730d3224364aef164ee23f
+  version: fbb02b2291d28baffd63558aa44b4b56f178d650
   repo: https://github.com/golang/time.git
   subpackages:
   - rate
 - name: google.golang.org/grpc
-  version: 7f73c863c0d52a3900bdd76ccaf08191ed51b714
+  version: 161c19534cbd91ed2b08cf4b8663103d59483eac
   repo: https://github.com/grpc/grpc-go.git
   subpackages:
   - grpclog

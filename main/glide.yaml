@@ -2,6 +2,7 @@ package: .
 import:
 - package: github.com/coreos/etcd
   repo: https://github.com/zxfishhack/etcd
+  version: easyraft-v2.0
   subpackages:
   - etcdserver/stats
   - pkg/fileutil
