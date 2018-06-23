@@ -1,6 +1,8 @@
 # easyraft
 RAFT C wrapper, origin go implement by coreos([Raft](https://github.com/coreos/etcd/tree/master/raft)) 
 
+[![Coverity Scan Build Status](https://scan.coverity.com/projects/16077/badge.svg)](https://scan.coverity.com/projects/zxfishhack-easyraft)
+
 ## API
 ```
 DLL_EXPORTS void  RAFT_SetCallback(struct RAFT_Callback* ctx);
