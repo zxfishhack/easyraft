@@ -52,6 +52,8 @@ DLL_EXPORTS int   RAFT_SetLogLevel(int logLevel);
 DLL_EXPORTS void  RAFT_GetVersion(char * v, size_t n);
 DLL_EXPORTS uint64_t RAFT_NewRaftServer(void* ctx, const char* jsonConfig);
 DLL_EXPORTS void  RAFT_DeleteRaftServer(uint64_t raft);
+DLL_EXPORTS uint64_t RAFT_NewRaftServerV2(void* ctx, const char* jsonConfig);
+DLL_EXPORTS void  RAFT_DeleteRaftServerV2(uint64_t raft, int purge);
 DLL_EXPORTS int   RAFT_Propose(uint64_t raft, void* data, int size, int timeoutms);
 DLL_EXPORTS int   RAFT_Snapshot(uint64_t raft);
 DLL_EXPORTS int   RAFT_AddServer(uint64_t raft, uint64_t id, const char* url);

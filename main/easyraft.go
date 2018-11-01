@@ -59,6 +59,8 @@ import (
 
 	"github.com/coreos/etcd/raft/raftpb"
 	"github.com/coreos/pkg/capnslog"
+
+	"../stablestorage"
 )
 
 type PeerStatus struct {
@@ -69,13 +71,14 @@ type PeerStatus struct {
 
 type raftServer struct {
 	inter *raftNodeInternal
-	snap  *snap.Snapshotter
+	snap  stablestorage.Snapshotter
 	ctx   unsafe.Pointer
 	node  *raftNode
 	wgMu  sync.RWMutex
 	wg    sync.WaitGroup
 	cfg   config
 	stopc chan struct{}
+	stor  stablestorage.StableStorage
 
 	// for debug
 	attachCount uint64
@@ -220,12 +223,14 @@ func (r *raftServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *raftServer) onRaftStarted() {
-	r.goAttach(r.purgeFile)
+	if r.stor == nil {
+		r.goAttach(r.purgeFile)
+	}
 }
 
 //export GetVersion
 func GetVersion(ver *C.char, n C.size_t) {
-	version := C.CString("v2.0")
+	version := C.CString("v3.0")
 	defer C.free(unsafe.Pointer(version))
 	C.strncpy(ver, version, n)
 }
@@ -299,6 +304,58 @@ func DeleteRaftServer(p C.uint64_t) {
 		close(r.stopc)
 		r.wg.Wait()
 		delete(holder, p)
+		runtime.GC()
+	}
+}
+
+//export NewRaftServerV2
+func NewRaftServerV2(ctx unsafe.Pointer, jsonConfig *C.char) C.uint64_t {
+	svr := &raftServer{
+		inter: &raftNodeInternal{
+			proposeC:    make(chan []byte),
+			snapshotC:   make(chan context.Context),
+			confChangeC: make(chan raftpb.ConfChange),
+			stateC:      make(chan raft.StateType),
+		},
+		ctx:   ctx,
+		stopc: make(chan struct{}),
+	}
+	svr.inter.ctx = svr
+	svr.goAttach(svr.onStateReport)
+	plog.Infof("NewRaftServer with config[%s]\n", C.GoString(jsonConfig))
+	if err := json.Unmarshal([]byte(C.GoString(jsonConfig)), &svr.cfg); err != nil {
+		lastError = err
+		return C.uint64_t(0)
+	}
+	var err error
+	svr.stor, err = stablestorage.NewRocksdbStorage(svr.cfg.StoragePath)
+	if svr.stor == nil {
+		lastError = err
+		return C.uint64_t(0)
+	}
+
+	svr.node, svr.snap = newRaftNodeV2(svr.cfg, svr.inter, svr.stor)
+	svr.goAttach(svr.readCommits)
+	cnt := C.uint64_t(atomic.AddUint64(&counter, 1))
+	holder[cnt] = svr
+	svr.inter.initDone.Wait()
+	return cnt
+}
+
+//export DeleteRaftServerV2
+func DeleteRaftServerV2(p C.uint64_t, purge C.int) {
+	r := holder[p]
+	if r != nil {
+		plog.Debugf("before real stop, attach:%d done:%d", r.attachCount, r.doneCount)
+		close(r.inter.proposeC)
+		close(r.inter.confChangeC)
+		r.node.stop()
+		close(r.stopc)
+		r.wg.Wait()
+		delete(holder, p)
+		if purge == 1 && r.wal != nil {
+			r.wal.Purge()
+		}
 		runtime.GC()
 	}
 }

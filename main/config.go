@@ -56,6 +56,7 @@ type config struct {
 	MaxSnapFiles      uint   `json:"max_snap_files"`
 	MaxWALFiles       uint   `json:"max_wal_files"`
 	PurgeFileInterval int    `json:"purge_file_interval"`
+	StoragePath       string `json:"storage_path"`
 }
 
 func (c *config) backendPath() string { return filepath.Join(c.Snapdir, "db") }

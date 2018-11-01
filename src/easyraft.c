@@ -24,6 +24,14 @@ void RAFT_DeleteRaftServer(uint64_t raft) {
     return DeleteRaftServer(raft);
 }
 
+uint64_t RAFT_NewRaftServerV2(void* ctx, const char* jsonConfig) {
+    return NewRaftServerV2(ctx, (char*)jsonConfig);
+}
+
+void RAFT_DeleteRaftServerV2(uint64_t raft, int purge) {
+    return DeleteRaftServerV2(raft, purge);
+}
+
 int RAFT_Propose(uint64_t raft, void* data, int size, int timeoutms) {
     return Propose(raft, data, size, timeoutms);
 }

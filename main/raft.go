@@ -46,6 +46,8 @@ import (
 	snap "github.com/coreos/etcd/raftsnap"
 	"github.com/coreos/etcd/wal"
 	"github.com/coreos/etcd/wal/walpb"
+
+	"../stablestorage"
 )
 
 type raftNodeInternal struct {
@@ -73,10 +75,11 @@ type raftNode struct {
 
 	node        raft.Node
 	raftStorage *raft.MemoryStorage
-	wal         *wal.WAL
+	wal         stablestorage.WAL
+	stor        stablestorage.StableStorage
 
-	snapshotter      *snap.Snapshotter
-	snapshotterReady chan *snap.Snapshotter
+	snapshotter      stablestorage.Snapshotter
+	snapshotterReady chan stablestorage.Snapshotter
 
 	snapCount uint64
 	transport *rafthttp.Transport
@@ -85,16 +88,22 @@ type raftNode struct {
 	httpdonec chan struct{}
 }
 
-func newRaftNode(cfg config, r *raftNodeInternal) (*raftNode, *snap.Snapshotter) {
+func newRaftNode(cfg config, r *raftNodeInternal) (*raftNode, stablestorage.Snapshotter) {
+	return newRaftNodeV2(cfg, r, nil)
+}
+
+func newRaftNodeV2(cfg config, r *raftNodeInternal, stor stablestorage.StableStorage) (*raftNode, stablestorage.Snapshotter) {
 	rc := &raftNode{
 		inter:     r,
 		cfg:       cfg,
 		stopc:     make(chan struct{}),
 		httpstopc: make(chan struct{}),
 		httpdonec: make(chan struct{}),
-
-		snapshotterReady: make(chan *snap.Snapshotter, 1),
+		stor     : stor,
+		
+		snapshotterReady: make(chan stablestorage.Snapshotter, 1),
 	}
+
 	rc.inter.commitC = make(chan *raftpb.Entry)
 	rc.inter.errorC = make(chan error)
 	rc.inter.initDone.Add(1)
@@ -194,8 +203,8 @@ func (rc *raftNode) loadSnapshot() *raftpb.Snapshot {
 }
 
 // openWAL returns a WAL ready for reading.
-func (rc *raftNode) openWAL(snapshot *raftpb.Snapshot) *wal.WAL {
-	if !wal.Exist(rc.cfg.Waldir) {
+func (rc *raftNode) openWAL(snapshot *raftpb.Snapshot) stablestorage.WAL {
+	if rc.stor == nil && !wal.Exist(rc.cfg.Waldir) {
 		if !fileutil.Exist(rc.cfg.Waldir) {
 			if err := os.Mkdir(rc.cfg.Waldir, 0750); err != nil {
 				plog.Fatalf("cannot create dir for wal (%v)", err)
@@ -214,18 +223,27 @@ func (rc *raftNode) openWAL(snapshot *raftpb.Snapshot) *wal.WAL {
 		walsnap.Index, walsnap.Term = snapshot.Metadata.Index, snapshot.Metadata.Term
 	}
 	plog.Infof("loading WAL at term %d and index %d", walsnap.Term, walsnap.Index)
-	w, err := wal.Open(rc.cfg.Waldir, walsnap)
-	if err != nil {
-		plog.Fatalf("error loading wal (%v)", err)
+	if rc.stor == nil {
+		w, err := wal.Open(rc.cfg.Waldir, walsnap)
+		if err != nil {
+			plog.Fatalf("error loading wal (%v)", err)
+		}
+	
+		return w
+	} else {
+		w, err := rc.stor.GetWAL(rc.cfg.ClusterID, rc.cfg.ID)
+		if err != nil {
+			plog.Fatalf("error loading wal (%v)", err)
+		}
+		return w
 	}
-
-	return w
 }
 
 // replayWAL replays WAL entries into the raft instance.
-func (rc *raftNode) replayWAL() *wal.WAL {
-	plog.Printf("replaying WAL of member %d", rc.cfg.ID)
+func (rc *raftNode) replayWAL() stablestorage.WAL {
+	plog.Printf("replaying WAL of member %d cluster %d", rc.cfg.ID, rc.cfg.ClusterID)
 	snapshot := rc.loadSnapshot()
+	if rc.stor == nil {}
 	w := rc.openWAL(snapshot)
 	_, st, ents, err := w.ReadAll()
 	if err != nil {
@@ -257,16 +275,25 @@ func (rc *raftNode) writeError(err error) {
 }
 
 func (rc *raftNode) startRaft() {
-	if !fileutil.Exist(rc.cfg.Snapdir) {
-		if err := os.Mkdir(rc.cfg.Snapdir, 0750); err != nil {
-			plog.Fatalf("cannot create dir for snapshot (%v)", err)
+	haveWAL := false
+	if rc.stor == nil {
+		if !fileutil.Exist(rc.cfg.Snapdir) {
+			if err := os.Mkdir(rc.cfg.Snapdir, 0750); err != nil {
+				plog.Fatalf("cannot create dir for snapshot (%v)", err)
+			}
 		}
-	}
-	rc.snapshotter = snap.New(rc.cfg.Snapdir)
-	rc.snapshotterReady <- rc.snapshotter
+		rc.snapshotter = snap.New(rc.cfg.Snapdir)
+		rc.snapshotterReady <- rc.snapshotter
+	
+		haveWAL = wal.Exist(rc.cfg.Waldir)
+		rc.wal = rc.replayWAL()
+	} else {
+		rc.snapshotter = rc.stor.GetSnapshooter(rc.cfg.ClusterID, rc.cfg.ID)
+		rc.snapshotterReady <- rc.snapshotter
 
-	haveWAL := wal.Exist(rc.cfg.Waldir)
-	rc.wal = rc.replayWAL()
+		haveWAL = rc.stor.ExistWAL(rc.cfg.ClusterID, rc.cfg.ID)
+		rc.wal = rc.replayWAL()
+	}
 
 	rpeers := make([]raft.Peer, len(rc.cfg.Peers))
 	rc.peerMu.Lock()
@@ -297,7 +324,7 @@ func (rc *raftNode) startRaft() {
 		if rc.cfg.JoinExist {
 			startPeers = nil
 		}
-		plog.Debugf("start node peers:%v", startPeers)
+		plog.Infof("start node peers:%v", startPeers)
 		rc.node = raft.StartNode(c, startPeers)
 	}
 	rc.inter.initDone.Done()

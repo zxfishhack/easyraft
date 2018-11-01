@@ -4,27 +4,44 @@ RAFT C wrapper, origin go implement by coreos([Raft](https://github.com/coreos/e
 [![Coverity Scan Build Status](https://scan.coverity.com/projects/16077/badge.svg)](https://scan.coverity.com/projects/zxfishhack-easyraft)
 
 ## API
-```
+```c
+// Set Global Raft Callback
 DLL_EXPORTS void  RAFT_SetCallback(struct RAFT_Callback* ctx);
+// Set Raft log
 DLL_EXPORTS int   RAFT_SetLogger(const char* logPath, int debug);
+// Set Raft log level
 DLL_EXPORTS int   RAFT_SetLogLevel(int logLevel);
+// Get Raft version
 DLL_EXPORTS void  RAFT_GetVersion(char * v, size_t n);
-DLL_EXPORTS void* RAFT_NewRaftServer(void* ctx, const char* jsonConfig);
-DLL_EXPORTS void  RAFT_DeleteRaftServer(void* raft);
-DLL_EXPORTS int   RAFT_Propose(void* raft, void* data, int size, int timeoutms);
-DLL_EXPORTS int   RAFT_Snapshot(void* raft);
-DLL_EXPORTS int   RAFT_AddServer(void* raft, uint64_t id, const char* url);
-DLL_EXPORTS int   RAFT_DelServer(void* raft, uint64_t id);
-DLL_EXPORTS int   RAFT_ChangeServer(void* raft, uint64_t id, const char* url);
+// Create a raft node, using original wal/snap format
+DLL_EXPORTS uint64_t RAFT_NewRaftServer(void* ctx, const char* jsonConfig);
+// Delete a raft node
+DLL_EXPORTS void  RAFT_DeleteRaftServer(uint64_t raft);
+// Create a raft node, using wal/snap on rocksdb
+DLL_EXPORTS uint64_t RAFT_NewRaftServerV2(void* ctx, const char* jsonConfig);
+// Delete a raft node
+DLL_EXPORTS void  RAFT_DeleteRaftServerV2(uint64_t raft, int leave);
+// Propose a raft log
+DLL_EXPORTS int   RAFT_Propose(uint64_t raft, void* data, int size, int timeoutms);
+// Trigger raft node snapshot
+DLL_EXPORTS int   RAFT_Snapshot(uint64_t raft);
+// Add a raft node to cluster
+DLL_EXPORTS int   RAFT_AddServer(uint64_t raft, uint64_t id, const char* url);
+// Del a raft node from cluster
+DLL_EXPORTS int   RAFT_DelServer(uint64_t raft, uint64_t id);
+// Change a raft node url in cluster
+DLL_EXPORTS int   RAFT_ChangeServer(uint64_t raft, uint64_t id, const char* url);
+// Send a message to a raft node in cluster
+DLL_EXPORTS int   RAFT_SendMessage(uint64_t raft, uint64_t id, const char* buf, size_t size, char* outbuf, size_t outsize);
 ```
 ## Usage
 
 1. Setup callback with RAFT_SetCallback
-1. Create Raft Server instance with RAFT_NewRaftServer
+1. Create Raft Server instance with RAFT_NewRaftServer(origin wal/snap format)/RAFT_NewRaftServerV2(wal/snap on rocksdb)
 1. Using RAFT_Propose to do propose
 1. Using RAFT_Snapshot force create a snapshot
 1. Using RAFT_AddServer/RAFT_DelServer/RAFT_ChangeServer change cluster members
-1. Explicit call RAFT_DeleteRaftServer before exit
+1. Explicit call RAFT_DeleteRaftServer/RAFT_DeleteRaftServerV2 before exit
 
 ## Callback
 Callback|Usage|Return Value|Comment
@@ -34,9 +51,10 @@ RAFT_Callback::freeSnapshot|free the memory allocator by RAFT_Callback::getSnaps
 RAFT_Callback::onStateChange|Raft State notify current state||
 RAFT_Callback::recoverFromSnapshot|recovery server state with a snapshot|0 meaing success|WARNING: return non-zero will panic
 RAFT_Callback::onCommit|notify a log is commited|0 meaning success|
+RAFT_Callback::onMessage|notify when recveive a message||
 
 ## Config
-```
+```json
 {
 	"id" : 1,
 	"cluster_id" : 1,
