@@ -35,6 +35,7 @@ easyraft:
 	@ln -s "$(PWD)/main/vendor" "vendor/src"
 	@echo \# building $(EASYRAFT_LIB)
 	GOPATH=$$GOPATH:$(PWD)/vendor go build -buildmode=c-archive -gccgoflags '-I$(PWD)/src' -o objs/libeasyraft.a ./main
+	GOPATH=$$GOPATH:$(PWD)/vendor go build -o bin/wal_repair ./wal_repair
 	gcc src/easyraft.c objs/libeasyraft.a -Isrc -Iobjs -Iinclude -o libs/$(EASYRAFT_LIB) -shared -fPIC
 
 tests: $(OBJS) 
